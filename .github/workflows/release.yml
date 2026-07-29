@@ -28,19 +28,6 @@ jobs:
             arch: x86_64
             goarch: amd64
             lib: liblogger.so
-          # macOS
-          - os: macos
-            runs-on: macos-13
-            target: darwin
-            arch: x86_64
-            goarch: amd64
-            lib: liblogger.dylib
-          - os: macos-arm
-            runs-on: macos-14
-            target: darwin
-            arch: arm64
-            goarch: arm64
-            lib: liblogger.dylib
           # Windows
           - os: windows
             runs-on: windows-latest
