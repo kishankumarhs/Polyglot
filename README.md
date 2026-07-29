@@ -31,7 +31,7 @@ polyglot-go (core)                  — Single source of truth for ABI & impleme
 
 **Independent packages:**
 
-- 📦 npm: `@polyglot/logger` ([polyglot-node](https://github.com/kishankumarhs/polyglot-node))
+- 📦 npm: `@polyglot-logger/node` ([polyglot-node](https://github.com/kishankumarhs/polyglot-node))
 - 📦 PyPI: `polyglot-logger` ([polyglot-py](https://github.com/kishankumarhs/polyglot-py))
 - 📦 NuGet: `Polyglot.Logger` ([polyglot-csharp](https://github.com/kishankumarhs/polyglot-csharp))
 

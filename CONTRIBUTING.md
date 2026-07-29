@@ -26,6 +26,7 @@ Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before participating in 
 ## Development Setup
 
 ### Prerequisites
+
 - Go 1.21+
 - Python 3.8+
 - Node.js 18+
@@ -64,6 +65,7 @@ This project uses Git submodules for language bindings. Please read [Submodule W
 - Write commit messages in imperative mood ("Add feature" not "Added feature")
 
 Example:
+
 ```
 Add HTTP sink error retry logic
 
@@ -82,6 +84,7 @@ Fixes #456
 - **.NET**: Follow [C# Coding Conventions](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
 
 Run linters before committing:
+
 ```bash
 make lint
 ```
@@ -99,24 +102,28 @@ make lint
 ## Areas for Contribution
 
 ### Core Logger (Go)
+
 - Performance optimizations
 - Bug fixes in async queue or file rotation
 - New sink implementations
 - Configuration enhancements
 
 ### Language Bindings
+
 - Bug fixes or API improvements
 - Better error handling and validation
 - Performance tuning
 - Test coverage improvements
 
 ### Documentation
+
 - Clarifying existing guides
 - Adding tutorials or examples
 - Improving API documentation
 - Fixing typos or formatting
 
 ### CI/CD & Build
+
 - Improving build scripts
 - GitHub Actions workflow optimizations
 - Cross-platform testing
@@ -158,7 +165,8 @@ When contributing to a specific language binding:
 5. Test against the latest core library
 
 See [Repositories](docs/REPOSITORIES.md) for the independent package locations:
-- 📦 npm: [@polyglot/logger](https://github.com/kishankumarhs/polyglot-node)
+
+- 📦 npm: [@polyglot-logger/node](https://github.com/kishankumarhs/polyglot-node)
 - 📦 PyPI: [polyglot-logger](https://github.com/kishankumarhs/polyglot-py)
 - 📦 NuGet: [Polyglot.Logger](https://github.com/kishankumarhs/polyglot-csharp)
 

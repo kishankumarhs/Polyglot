@@ -7,7 +7,7 @@ Successfully implemented a **production-ready, completely automated system** for
 ### User Experience After This Implementation
 
 ```bash
-npm install @polyglot/logger        # Package includes pre-built binaries
+npm install @polyglot-logger/node        # Package includes pre-built binaries
 pip install polyglot-logger         # No external downloads needed
 dotnet add package Polyglot.Logger  # Just works!
 
@@ -15,7 +15,7 @@ dotnet add package Polyglot.Logger  # Just works!
 echo "service: my-app" > polyglot.yaml
 
 # Code immediately works - logger auto-initializes!
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 const log = new Logger();
 ```
 
@@ -106,11 +106,11 @@ const log = new Logger();
 ### Discovery & Initialization on First Import
 
 ```
-1. User: npm install @polyglot/logger
+1. User: npm install @polyglot-logger/node
    ↓
    Package includes: dist/, bin/, koffi dependency
 
-2. User: import { Logger } from "@polyglot/logger"
+2. User: import { Logger } from "@polyglot-logger/node"
    ↓
    Executes index.ts (entry point)
 
@@ -357,12 +357,12 @@ logger = Logger("my-app")  # Config auto-loaded from project root
 
 ```typescript
 // Before: Manual path passing
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 const config = require("../config.json");
 const logger = new Logger(config);
 
 // After: Auto-discovery from polyglot.yaml
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 const logger = new Logger({ service: "my-app" }); // Config auto-loaded
 ```
 

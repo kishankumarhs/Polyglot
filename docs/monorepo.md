@@ -41,7 +41,7 @@ your-monorepo/
 ```json
 {
   "dependencies": {
-    "@polyglot/logger": "*"
+    "@polyglot-logger/node": "*"
   }
 }
 ```

@@ -66,7 +66,7 @@ Polyglot Logger is organized as a **modular monorepo** where the Go core and eac
 
 **Type:** Git Submodule at `bindings/node/` in core
 
-**Package:** `@polyglot/logger` on npm
+**Package:** `@polyglot-logger/node` on npm
 
 **What It Includes:**
 ```
@@ -232,7 +232,7 @@ polyglot-csharp/
    - Publishes to registry (npm/PyPI/NuGet)
                     ↓
 4. Result: Three independent packages all at v0.3.0
-   - npm: @polyglot/logger@0.3.0
+   - npm: @polyglot-logger/node@0.3.0
    - PyPI: polyglot-logger==0.3.0
    - NuGet: Polyglot.Logger 0.3.0
 ```
@@ -242,7 +242,7 @@ polyglot-csharp/
 When a user installs any binding, it auto-discovers project configuration:
 
 ```
-import { Logger } from "@polyglot/logger"
+import { Logger } from "@polyglot-logger/node"
                     ↓
 On module load: autoInitialize()
                     ↓
@@ -336,7 +336,7 @@ git tag v0.3.0
 git push origin main v0.3.0
 
 # Results:
-# - npm publishes @polyglot/logger@0.3.0 automatically
+# - npm publishes @polyglot-logger/node@0.3.0 automatically
 # - PyPI publishes polyglot-logger==0.3.0 automatically
 # - NuGet publishes Polyglot.Logger 0.3.0 automatically
 ```
@@ -555,7 +555,7 @@ git submodule foreach 'git push -u origin feature/new-sink'
 - A: Run `go run ./cmd/codegen` in core repository root
 
 **Q: Package not installing from registry**
-- A: Check binaries are bundled: `npm ls @polyglot/logger`, `pip show polyglot-logger`, etc.
+- A: Check binaries are bundled: `npm ls @polyglot-logger/node`, `pip show polyglot-logger`, etc.
 
 ---
 

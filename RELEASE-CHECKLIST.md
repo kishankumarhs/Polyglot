@@ -112,7 +112,7 @@ EOF
 # Test Node.js
 npm init -y
 npm install ../../path/to/Polyglot/bindings/node/polyglot-logger-*.tgz
-node -e "const {Logger} = require('@polyglot/logger'); console.log('✓ Node.js works')"
+node -e "const {Logger} = require('@polyglot-logger/node'); console.log('✓ Node.js works')"
 
 # Test Python
 pip install ../../path/to/Polyglot/bindings/python/dist/polyglot-logger-*.whl
@@ -182,8 +182,8 @@ git push origin v0.2.0
 #### npm
 
 ```bash
-npm view @polyglot/logger@0.2.0
-npm install @polyglot/logger@0.2.0 --dry-run
+npm view @polyglot-logger/node@0.2.0
+npm install @polyglot-logger/node@0.2.0 --dry-run
 ```
 
 #### PyPI
@@ -232,7 +232,7 @@ If something goes wrong after publishing:
 
 ```bash
 # Unpublish from npm (within 72 hours)
-npm unpublish @polyglot/logger@0.2.0
+npm unpublish @polyglot-logger/node@0.2.0
 
 # Unpublish from PyPI (within 24 hours)
 pip install twine
@@ -304,7 +304,7 @@ git push origin main && git push origin v0.2.0
 # 5. Wait for Actions to complete (~15 min)
 
 # 6. Verify packages
-npm view @polyglot/logger@0.2.0
+npm view @polyglot-logger/node@0.2.0
 pip index versions polyglot-logger | head -5
 ```
 

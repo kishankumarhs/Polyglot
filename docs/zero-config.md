@@ -45,7 +45,7 @@ logger.info("Hello from Python", {"user_id": 123})
 
 ```javascript
 // Auto-initialization happens on import
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 
 const logger = new Logger({ service: "my-app" }); // Uses polyglot.yaml
 logger.info("Hello from Node.js", { user_id: 123 });
@@ -181,7 +181,7 @@ logger = Logger(
 ### Node.js
 
 ```javascript
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 
 // Override specific settings
 const logger = new Logger({

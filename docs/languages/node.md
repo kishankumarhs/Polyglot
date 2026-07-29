@@ -1,6 +1,6 @@
 # Node.js / TypeScript Guide
 
-**Package:** `@polyglot/logger` ([npm](https://www.npmjs.com/package/@polyglot/logger))  
+**Package:** `@polyglot-logger/node` ([npm](https://www.npmjs.com/package/@polyglot-logger/node))  
 **Repository:** [polyglot-node](https://github.com/kishankumarhs/polyglot-node) (Git submodule)  
 **Status:** Independent package with bundled native binaries
 
@@ -20,7 +20,7 @@ See [REPOSITORIES.md](../REPOSITORIES.md) for how all four repositories work tog
 ### From npm (Recommended)
 
 ```bash
-npm install @polyglot/logger
+npm install @polyglot-logger/node
 ```
 
 Pre-compiled native binaries are included. No build needed.
@@ -48,7 +48,7 @@ import {
   libraryVersion,
   abiVersion,
   type LoggerOptions,
-} from "@polyglot/logger";
+} from "@polyglot-logger/node";
 
 console.log(libraryVersion(), abiVersion());
 

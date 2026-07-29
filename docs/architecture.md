@@ -36,7 +36,7 @@ Polyglot uses a **modular monorepo** pattern where the core Go implementation an
 | Repository          | Type      | Purpose                          | Package               |
 | ------------------- | --------- | -------------------------------- | --------------------- |
 | **polyglot-go**     | Core      | Go logger, ABI contract, codegen | N/A                   |
-| **polyglot-node**   | Submodule | Node.js/TypeScript bindings      | npm @polyglot/logger  |
+| **polyglot-node**   | Submodule | Node.js/TypeScript bindings      | npm @polyglot-logger/node  |
 | **polyglot-py**     | Submodule | Python bindings                  | PyPI polyglot-logger  |
 | **polyglot-csharp** | Submodule | .NET bindings                    | NuGet Polyglot.Logger |
 

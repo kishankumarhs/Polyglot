@@ -11,7 +11,7 @@
 
 ### ⏳ Pending
 
-- Publishing to npm registry (@polyglot/logger)
+- Publishing to npm registry (@polyglot-logger/node)
 - Publishing to PyPI (polyglot-logger)
 - Publishing to NuGet (Polyglot.Logger)
 
@@ -82,7 +82,7 @@ dotnet nuget push Polyglot.Logger.0.2.0.nupkg \
 
 ## 📋 Package Details
 
-### npm (@polyglot/logger)
+### npm (@polyglot-logger/node)
 
 - **Version:** 0.2.0
 - **Size:** 2.6 MB (with macOS dylib)
@@ -107,7 +107,7 @@ After publishing, verify each package:
 
 ```bash
 # Check npm
-npm view @polyglot/logger@0.2.0
+npm view @polyglot-logger/node@0.2.0
 
 # Check PyPI
 pip index versions polyglot-logger
@@ -131,7 +131,7 @@ The GitHub Actions `release.yml` workflow is configured to:
 ### npm publish fails
 
 - Verify NPM_TOKEN is valid: `npm token list`
-- Check package name isn't already published: `npm view @polyglot/logger`
+- Check package name isn't already published: `npm view @polyglot-logger/node`
 - Ensure you're publishing to the correct registry: `npm config get registry`
 
 ### PyPI upload fails

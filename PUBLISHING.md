@@ -13,7 +13,7 @@ Each language binding is published as a **completely independent, self-contained
 
 ```text
 User's Application
-  ├── npm install @polyglot/logger
+  ├── npm install @polyglot-logger/node
   ├── pip install polyglot-logger
   └── dotnet add package Polyglot.Logger
       ↓
@@ -161,12 +161,12 @@ Once published, users can install any binding and use it immediately:
 ### Node.js
 
 ```bash
-npm install @polyglot/logger
+npm install @polyglot-logger/node
 ```
 
 ```javascript
 // Just import - auto-discovers polyglot.yaml and initializes!
-import { Logger } from "@polyglot/logger";
+import { Logger } from "@polyglot-logger/node";
 
 const logger = new Logger({ service: "my-app" });
 logger.info("This works without any config!", { userId: 123 });
@@ -222,10 +222,10 @@ Each package automatically:
 
 The GitHub Actions workflow automatically creates multi-platform packages:
 
-**npm package (`@polyglot/logger@0.2.0`)** includes:
+**npm package (`@polyglot-logger/node@0.2.0`)** includes:
 
 ```
-@polyglot/logger/
+@polyglot-logger/node/
 ├── dist/
 │   ├── index.js
 │   ├── auto-init.js
@@ -270,7 +270,7 @@ Ensure the package includes binaries:
 
 ```bash
 # Node.js
-ls node_modules/@polyglot/logger/bin/
+ls node_modules/@polyglot-logger/node/bin/
 
 # Python
 python -c "from pathlib import Path; print(Path('polyglot_logger').parent / 'bin')"
@@ -293,7 +293,7 @@ node app.js
 Ensure all versions match in your project:
 
 ```bash
-npm ls @polyglot/logger
+npm ls @polyglot-logger/node
 pip show polyglot-logger
 dotnet list package --include-transitive | grep Polyglot
 ```
@@ -353,7 +353,7 @@ Modify `scripts/build-native.sh` to accept custom compiler paths if needed.
 
 ## Support & Issues
 
-- **npm**: https://www.npmjs.com/package/@polyglot/logger
+- **npm**: https://www.npmjs.com/package/@polyglot-logger/node
 - **PyPI**: https://pypi.org/project/polyglot-logger/
 - **NuGet**: https://www.nuget.org/packages/Polyglot.Logger/
 - **GitHub**: https://github.com/polyglot/logger (issues & discussions)
