@@ -1,0 +1,9 @@
+[submodule "bindings/node"]
+	path = bindings/node
+	url = https://github.com/kishankumarhs/polyglot-node.git
+[submodule "bindings/python"]
+	path = bindings/python
+	url = https://github.com/kishankumarhs/polyglot-py.git
+[submodule "bindings/dotnet"]
+	path = bindings/dotnet
+	url = https://github.com/kishankumarhs/polyglot-csharp.git
