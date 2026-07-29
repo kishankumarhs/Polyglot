@@ -109,19 +109,19 @@ export POLYGLOT_CONFIG_FILE=/etc/myapp/config.json
 
 ## Constructor Options
 
-| Parameter | Maps to config |
-| --------- | -------------- |
-| `service` (positional) | `service` |
-| `service_version` | `service_version` |
-| `environment` | `environment` |
-| `level` | `level` |
-| `stdout` | `stdout` |
-| `file` / `file_path` + size/backup/age | `file` |
-| `http` | `http` dict (`url`, `timeout_ms`, `headers`, …) |
-| `async_mode` | `async` |
-| `queue_size` | `queueSize` |
-| `overflow` | `overflow` |
-| `fields` | `fields` |
+| Parameter                              | Maps to config                                  |
+| -------------------------------------- | ----------------------------------------------- |
+| `service` (positional)                 | `service`                                       |
+| `service_version`                      | `service_version`                               |
+| `environment`                          | `environment`                                   |
+| `level`                                | `level`                                         |
+| `stdout`                               | `stdout`                                        |
+| `file` / `file_path` + size/backup/age | `file`                                          |
+| `http`                                 | `http` dict (`url`, `timeout_ms`, `headers`, …) |
+| `async_mode`                           | `async`                                         |
+| `queue_size`                           | `queueSize`                                     |
+| `overflow`                             | `overflow`                                      |
+| `fields`                               | `fields`                                        |
 
 ### HTTP-only example
 
@@ -143,15 +143,15 @@ with Logger(
 
 ## API
 
-| Method | Description |
-| ------ | ----------- |
-| `trace` / `debug` / `info` / `warn` / `error` / `fatal` | Structured log; kwargs → fields |
-| `log(level, message, **fields)` | Explicit level |
-| `log_simple(level, message)` | No extra fields |
-| `set_fields(mapping)` | Replace context fields |
-| `reload_config(...)` | Hot reload (same kwargs as create helpers) |
-| `stats()` | Counter dict |
-| `flush()` / `close()` | Drain / shutdown |
+| Method                                                  | Description                                |
+| ------------------------------------------------------- | ------------------------------------------ |
+| `trace` / `debug` / `info` / `warn` / `error` / `fatal` | Structured log; kwargs → fields            |
+| `log(level, message, **fields)`                         | Explicit level                             |
+| `log_simple(level, message)`                            | No extra fields                            |
+| `set_fields(mapping)`                                   | Replace context fields                     |
+| `reload_config(...)`                                    | Hot reload (same kwargs as create helpers) |
+| `stats()`                                               | Counter dict                               |
+| `flush()` / `close()`                                   | Drain / shutdown                           |
 
 `fatal` does **not** exit the process.
 

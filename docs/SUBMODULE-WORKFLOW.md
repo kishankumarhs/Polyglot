@@ -20,11 +20,11 @@ polyglot-go (Core Repository)
 
 ### Submodule Repositories
 
-| Language | Repository | URL |
-|----------|-----------|-----|
-| Node.js | polyglot-node | https://github.com/kishankumarhs/polyglot-node.git |
-| Python | polyglot-py | https://github.com/kishankumarhs/polyglot-py.git |
-| .NET | polyglot-csharp | https://github.com/kishankumarhs/polyglot-csharp.git |
+| Language | Repository      | URL                                                  |
+| -------- | --------------- | ---------------------------------------------------- |
+| Node.js  | polyglot-node   | https://github.com/kishankumarhs/polyglot-node.git   |
+| Python   | polyglot-py     | https://github.com/kishankumarhs/polyglot-py.git     |
+| .NET     | polyglot-csharp | https://github.com/kishankumarhs/polyglot-csharp.git |
 
 ---
 
@@ -289,14 +289,14 @@ git commit -m "chore: remove node binding submodule"
 
 ## Git Commands Reference
 
-| Command | Purpose |
-|---------|---------|
-| `git submodule status` | Show all submodules and their tracked commits |
-| `git submodule update --init --recursive` | Initialize all submodules on first clone |
-| `git submodule update --remote --merge` | Fetch latest from all submodule remotes |
-| `git submodule foreach 'git status'` | Run git status in each submodule |
-| `git submodule foreach 'git push origin main'` | Push changes in all submodules |
-| `git clone --recurse-submodules <url>` | Clone with all submodules initialized |
+| Command                                        | Purpose                                       |
+| ---------------------------------------------- | --------------------------------------------- |
+| `git submodule status`                         | Show all submodules and their tracked commits |
+| `git submodule update --init --recursive`      | Initialize all submodules on first clone      |
+| `git submodule update --remote --merge`        | Fetch latest from all submodule remotes       |
+| `git submodule foreach 'git status'`           | Run git status in each submodule              |
+| `git submodule foreach 'git push origin main'` | Push changes in all submodules                |
+| `git clone --recurse-submodules <url>`         | Clone with all submodules initialized         |
 
 ---
 
@@ -326,12 +326,14 @@ go test ./...                      # Core tests
 ## Best Practices
 
 ✅ **DO:**
+
 - Always push submodule changes before updating parent references
 - Use descriptive commit messages that reference submodule updates
 - Test each submodule independently before updating core reference
 - Keep submodule commits aligned with core releases
 
 ❌ **DON'T:**
+
 - Force push to submodule branches (breaks other developers' tracking)
 - Modify submodule files directly from the parent repository
 - Leave uncommitted submodule changes before switching branches
@@ -344,6 +346,7 @@ go test ./...                      # Core tests
 **Q: Do I need to clone all submodules if I only work on one binding?**
 
 A: No! You can clone just the specific binding:
+
 ```bash
 git clone https://github.com/kishankumarhs/polyglot-node.git
 ```
@@ -362,6 +365,7 @@ A: ```bash
 cd bindings/node
 git log --oneline v1.0.0..v1.1.0
 git diff v1.0.0 v1.1.0
+
 ```
 
 ---
@@ -372,3 +376,4 @@ git diff v1.0.0 v1.1.0
 - Node Binding Issues: [polyglot-node](https://github.com/kishankumarhs/polyglot-node/issues)
 - Python Binding Issues: [polyglot-py](https://github.com/kishankumarhs/polyglot-py/issues)
 - .NET Binding Issues: [polyglot-csharp](https://github.com/kishankumarhs/polyglot-csharp/issues)
+```

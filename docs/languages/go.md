@@ -95,15 +95,15 @@ cfg.HTTP = &core.HTTPConfig{
 
 ## API highlights
 
-| Method | Notes |
-| ------ | ----- |
-| `New(Config)` | Validate + open sinks |
-| `Log` / `Info` / … / `Fatal` | `Fatal` does not `os.Exit` |
-| `LogJSON` / `LogInt` | Used by the ABI layer |
-| `SetFields` / `SetFieldsJSON` | Context |
-| `ReloadConfig` | Hot reload |
-| `Stats` / `StatsJSON` | Counters including `WriteErrors`, `Buffered`, `SinkDropped` |
-| `Flush` / `Close` | `Close` returns flush errors |
+| Method                        | Notes                                                       |
+| ----------------------------- | ----------------------------------------------------------- |
+| `New(Config)`                 | Validate + open sinks                                       |
+| `Log` / `Info` / … / `Fatal`  | `Fatal` does not `os.Exit`                                  |
+| `LogJSON` / `LogInt`          | Used by the ABI layer                                       |
+| `SetFields` / `SetFieldsJSON` | Context                                                     |
+| `ReloadConfig`                | Hot reload                                                  |
+| `Stats` / `StatsJSON`         | Counters including `WriteErrors`, `Buffered`, `SinkDropped` |
+| `Flush` / `Close`             | `Close` returns flush errors                                |
 
 ## Tests
 

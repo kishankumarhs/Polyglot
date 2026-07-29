@@ -33,28 +33,28 @@ Polyglot uses a **modular monorepo** pattern where the core Go implementation an
 
 ## Repository Details
 
-| Repository | Type | Purpose | Package |
-|------------|------|---------|----------|
-| **polyglot-go** | Core | Go logger, ABI contract, codegen | N/A |
-| **polyglot-node** | Submodule | Node.js/TypeScript bindings | npm @polyglot/logger |
-| **polyglot-py** | Submodule | Python bindings | PyPI polyglot-logger |
-| **polyglot-csharp** | Submodule | .NET bindings | NuGet Polyglot.Logger |
+| Repository          | Type      | Purpose                          | Package               |
+| ------------------- | --------- | -------------------------------- | --------------------- |
+| **polyglot-go**     | Core      | Go logger, ABI contract, codegen | N/A                   |
+| **polyglot-node**   | Submodule | Node.js/TypeScript bindings      | npm @polyglot/logger  |
+| **polyglot-py**     | Submodule | Python bindings                  | PyPI polyglot-logger  |
+| **polyglot-csharp** | Submodule | .NET bindings                    | NuGet Polyglot.Logger |
 
 ## Core Repository Structure
 
-| Path | Role |
-|------|------|
-| `api/abi.json` | **C ABI contract** — single source of truth |
-| `internal/logger/` | Go core implementation |
-| `native/` | CGO exports + `logger.h` generation |
-| `cmd/codegen/` | Generates FFI for all bindings |
-| `cmd/logger-demo/` | Go demo/test program |
-| `bindings/node/` | Git submodule → polyglot-node |
-| `bindings/python/` | Git submodule → polyglot-py |
-| `bindings/dotnet/` | Git submodule → polyglot-csharp |
-| `examples/` | Example usage across languages |
-| `scripts/` | Cross-platform native build scripts |
-| `docs/` | Documentation hub |
+| Path               | Role                                        |
+| ------------------ | ------------------------------------------- |
+| `api/abi.json`     | **C ABI contract** — single source of truth |
+| `internal/logger/` | Go core implementation                      |
+| `native/`          | CGO exports + `logger.h` generation         |
+| `cmd/codegen/`     | Generates FFI for all bindings              |
+| `cmd/logger-demo/` | Go demo/test program                        |
+| `bindings/node/`   | Git submodule → polyglot-node               |
+| `bindings/python/` | Git submodule → polyglot-py                 |
+| `bindings/dotnet/` | Git submodule → polyglot-csharp             |
+| `examples/`        | Example usage across languages              |
+| `scripts/`         | Cross-platform native build scripts         |
+| `docs/`            | Documentation hub                           |
 
 ## Code Generation Flow
 

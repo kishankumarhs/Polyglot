@@ -123,16 +123,16 @@ export POLYGLOT_CONFIG_FILE=/etc/myapp/config.json
 
 ## Options (`LoggerOptions`)
 
-| Option | Notes |
-| ------ | ----- |
-| `service` | Required for useful logs (`serviceName` deprecated) |
-| `serviceVersion`, `environment`, `level` | Metadata / min level |
-| `stdout` | Default `true` |
-| `file` | `{ path, enabled?, maxSizeMb?, maxBackups?, maxAgeDays? }` |
-| `filePath` | Deprecated shortcut for file path |
-| `http` | `{ url, enabled?, timeoutMs?, headers?, batchSize?, flushIntervalMs? }` |
-| `async`, `queueSize`, `overflow` | Queue behavior |
-| `fields` | Base fields |
+| Option                                   | Notes                                                                   |
+| ---------------------------------------- | ----------------------------------------------------------------------- |
+| `service`                                | Required for useful logs (`serviceName` deprecated)                     |
+| `serviceVersion`, `environment`, `level` | Metadata / min level                                                    |
+| `stdout`                                 | Default `true`                                                          |
+| `file`                                   | `{ path, enabled?, maxSizeMb?, maxBackups?, maxAgeDays? }`              |
+| `filePath`                               | Deprecated shortcut for file path                                       |
+| `http`                                   | `{ url, enabled?, timeoutMs?, headers?, batchSize?, flushIntervalMs? }` |
+| `async`, `queueSize`, `overflow`         | Queue behavior                                                          |
+| `fields`                                 | Base fields                                                             |
 
 ### HTTP-only example
 
@@ -152,15 +152,15 @@ const log = new Logger({
 
 ## API
 
-| Method | Description |
-| ------ | ----------- |
-| `trace` / `debug` / `info` / `warn` / `error` / `fatal` | Structured log |
-| `log(level, message, fields?)` | Explicit level |
-| `logSimple(level, message)` | No fields |
-| `setFields(fields)` | Context fields |
-| `reloadConfig(options)` | Hot reload |
-| `stats()` | Counters object |
-| `flush()` / `close()` | Drain / shutdown |
+| Method                                                  | Description      |
+| ------------------------------------------------------- | ---------------- |
+| `trace` / `debug` / `info` / `warn` / `error` / `fatal` | Structured log   |
+| `log(level, message, fields?)`                          | Explicit level   |
+| `logSimple(level, message)`                             | No fields        |
+| `setFields(fields)`                                     | Context fields   |
+| `reloadConfig(options)`                                 | Hot reload       |
+| `stats()`                                               | Counters object  |
+| `flush()` / `close()`                                   | Drain / shutdown |
 
 `fatal` does **not** call `process.exit`.
 

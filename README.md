@@ -8,17 +8,17 @@ One place owns JSON formatting, async queuing, file rotation, and HTTP shipping.
 
 **Start with:** [`docs/REPOSITORIES.md`](docs/REPOSITORIES.md) for the modular architecture overview
 
-| Guide | Description |
-| ----- | ----------- |
-| [Repositories](docs/REPOSITORIES.md) | All repositories & how they connect |
-| [Submodule Workflow](docs/SUBMODULE-WORKFLOW.md) | Development with Git submodules |
-| [Quick Reference](SUBMODULE-QUICK-REFERENCE.md) | Fast lookup for common tasks |
-| [Getting started](docs/getting-started.md) | Build the library and run your first log |
-| [User guide](docs/user-guide.md) | Levels, fields, async, stats, lifecycle |
-| [Configuration](docs/configuration.md) | Full JSON schema and presets |
-| [Sinks & Loki/Grafana](docs/sinks.md) | Stdout, file, HTTP centralization |
-| [Python](docs/languages/python.md) · [Node](docs/languages/node.md) · [.NET](docs/languages/dotnet.md) · [Go](docs/languages/go.md) · [C](docs/languages/c.md) | Language APIs |
-| [Build](docs/build.md) · [Architecture](docs/architecture.md) · [Troubleshooting](docs/troubleshooting.md) | Operators & maintainers |
+| Guide                                                                                                                                                          | Description                              |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| [Repositories](docs/REPOSITORIES.md)                                                                                                                           | All repositories & how they connect      |
+| [Submodule Workflow](docs/SUBMODULE-WORKFLOW.md)                                                                                                               | Development with Git submodules          |
+| [Quick Reference](SUBMODULE-QUICK-REFERENCE.md)                                                                                                                | Fast lookup for common tasks             |
+| [Getting started](docs/getting-started.md)                                                                                                                     | Build the library and run your first log |
+| [User guide](docs/user-guide.md)                                                                                                                               | Levels, fields, async, stats, lifecycle  |
+| [Configuration](docs/configuration.md)                                                                                                                         | Full JSON schema and presets             |
+| [Sinks & Loki/Grafana](docs/sinks.md)                                                                                                                          | Stdout, file, HTTP centralization        |
+| [Python](docs/languages/python.md) · [Node](docs/languages/node.md) · [.NET](docs/languages/dotnet.md) · [Go](docs/languages/go.md) · [C](docs/languages/c.md) | Language APIs                            |
+| [Build](docs/build.md) · [Architecture](docs/architecture.md) · [Troubleshooting](docs/troubleshooting.md)                                                     | Operators & maintainers                  |
 
 ## 🏗️ Repository Structure
 
@@ -30,6 +30,7 @@ polyglot-go (core)                  — Single source of truth for ABI & impleme
 ```
 
 **Independent packages:**
+
 - 📦 npm: `@polyglot/logger` ([polyglot-node](https://github.com/kishankumarhs/polyglot-node))
 - 📦 PyPI: `polyglot-logger` ([polyglot-py](https://github.com/kishankumarhs/polyglot-py))
 - 📦 NuGet: `Polyglot.Logger` ([polyglot-csharp](https://github.com/kishankumarhs/polyglot-csharp))
@@ -87,7 +88,14 @@ Set `POLYGLOT_LOGGER_LIB` to the absolute path of the shared library if auto-dis
 ## Example log line
 
 ```json
-{"timestamp":"2026-07-29T07:00:00.123456789Z","level":"info","message":"order created","service_name":"payments-api","environment":"prod","fields":{"order_id":123,"amount":42.5}}
+{
+  "timestamp": "2026-07-29T07:00:00.123456789Z",
+  "level": "info",
+  "message": "order created",
+  "service_name": "payments-api",
+  "environment": "prod",
+  "fields": { "order_id": 123, "amount": 42.5 }
+}
 ```
 
 ## Repository layout

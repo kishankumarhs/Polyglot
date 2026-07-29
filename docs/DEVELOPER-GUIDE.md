@@ -81,6 +81,7 @@ make build-native
 ```
 
 This produces:
+
 - `bin/logger.dll` (Windows)
 - `bin/liblogger.dylib` (macOS)
 - `bin/liblogger.so` (Linux)
@@ -298,16 +299,16 @@ git push origin main
 
 ### Hand-Written vs. Generated Code
 
-| Location | Type | Edit? | Notes |
-| -------- | ---- | ----- | ----- |
-| `internal/logger/*.go` | Hand-written | ✅ YES | Core implementation |
-| `native/export.go` | Hand-written | ✅ YES | CGO exports & wrapping |
-| `api/abi.json` | Hand-written | ✅ YES | ABI contract |
-| `native/include/logger.h` | Generated | ❌ NO | Run codegen after ABI changes |
-| `*_ffi_generated.ts` | Generated | ❌ NO | Regenerated from ABI |
-| `*_ffi_generated.py` | Generated | ❌ NO | Regenerated from ABI |
-| `NativeMethods.Generated.cs` | Generated | ❌ NO | Regenerated from ABI |
-| `src/index.ts` / `__init__.py` / `Logger.cs` | Hand-written | ✅ YES | Binding SDK code |
+| Location                                     | Type         | Edit?  | Notes                         |
+| -------------------------------------------- | ------------ | ------ | ----------------------------- |
+| `internal/logger/*.go`                       | Hand-written | ✅ YES | Core implementation           |
+| `native/export.go`                           | Hand-written | ✅ YES | CGO exports & wrapping        |
+| `api/abi.json`                               | Hand-written | ✅ YES | ABI contract                  |
+| `native/include/logger.h`                    | Generated    | ❌ NO  | Run codegen after ABI changes |
+| `*_ffi_generated.ts`                         | Generated    | ❌ NO  | Regenerated from ABI          |
+| `*_ffi_generated.py`                         | Generated    | ❌ NO  | Regenerated from ABI          |
+| `NativeMethods.Generated.cs`                 | Generated    | ❌ NO  | Regenerated from ABI          |
+| `src/index.ts` / `__init__.py` / `Logger.cs` | Hand-written | ✅ YES | Binding SDK code              |
 
 ### Modifying the ABI
 

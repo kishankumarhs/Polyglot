@@ -122,16 +122,16 @@ Environment.SetEnvironmentVariable("POLYGLOT_CONFIG_FILE", "/etc/myapp/config.js
 
 ## Options
 
-| Property | Notes |
-| -------- | ----- |
-| `Service` | Required |
-| `ServiceVersion`, `Environment`, `Level` | Metadata / min level |
-| `Stdout` | Default `true` |
-| `File` | `FileOptions` with `Path`, sizes, backups |
-| `FilePath` | Convenience when you only need a path |
-| `Http` | `HttpOptions` with `Url`, `Headers`, batch settings |
-| `Async`, `QueueSize`, `Overflow` | Queue behavior |
-| `Fields` | Base fields |
+| Property                                 | Notes                                               |
+| ---------------------------------------- | --------------------------------------------------- |
+| `Service`                                | Required                                            |
+| `ServiceVersion`, `Environment`, `Level` | Metadata / min level                                |
+| `Stdout`                                 | Default `true`                                      |
+| `File`                                   | `FileOptions` with `Path`, sizes, backups           |
+| `FilePath`                               | Convenience when you only need a path               |
+| `Http`                                   | `HttpOptions` with `Url`, `Headers`, batch settings |
+| `Async`, `QueueSize`, `Overflow`         | Queue behavior                                      |
+| `Fields`                                 | Base fields                                         |
 
 ### HTTP-only example
 
@@ -156,13 +156,13 @@ using var log = new Logger(new LoggerOptions
 
 ## API
 
-| Method | Description |
-| ------ | ----------- |
-| `Trace` / `Debug` / `Info` / `Warn` / `Error` / `Fatal` | Structured log |
-| `Log(Level, message, fields?)` | Explicit level |
-| `LogSimple(Level, message)` | No fields |
-| `SetFields` / `ReloadConfig` | Context / hot reload |
-| `Stats` / `Flush` / `Dispose` | Observability / lifecycle |
+| Method                                                  | Description               |
+| ------------------------------------------------------- | ------------------------- |
+| `Trace` / `Debug` / `Info` / `Warn` / `Error` / `Fatal` | Structured log            |
+| `Log(Level, message, fields?)`                          | Explicit level            |
+| `LogSimple(Level, message)`                             | No fields                 |
+| `SetFields` / `ReloadConfig`                            | Context / hot reload      |
+| `Stats` / `Flush` / `Dispose`                           | Observability / lifecycle |
 
 `Fatal` does **not** call `Environment.Exit`. Failures throw `LoggerException`.
 
