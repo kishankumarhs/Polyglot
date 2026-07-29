@@ -34,17 +34,13 @@
       "name": "logger_create_v1",
       "doc": "Create a logger from JSON config (schema v1).\nReturns a non-NULL handle on success, NULL on failure.\nOn failure, call logger_last_error(NULL) for the message.",
       "returns": "handle",
-      "args": [
-        { "name": "config_json", "type": "string" }
-      ]
+      "args": [{ "name": "config_json", "type": "string" }]
     },
     {
       "name": "logger_create",
       "doc": "Alias of logger_create_v1 for early consumers.",
       "returns": "handle",
-      "args": [
-        { "name": "config_json", "type": "string" }
-      ]
+      "args": [{ "name": "config_json", "type": "string" }]
     },
     {
       "name": "logger_log",
@@ -89,41 +85,37 @@
       "name": "logger_flush",
       "doc": "Drain async queue and sync sinks.",
       "returns": "int",
-      "args": [
-        { "name": "handle", "type": "handle" }
-      ]
+      "args": [{ "name": "handle", "type": "handle" }]
     },
     {
       "name": "logger_close",
       "doc": "Stop worker, flush, and free the logger.",
       "returns": "int",
-      "args": [
-        { "name": "handle", "type": "handle" }
-      ]
+      "args": [{ "name": "handle", "type": "handle" }]
     },
     {
       "name": "logger_stats",
       "doc": "Stats JSON: {\"queued\":N,\"dropped\":N,\"flushed\":N,\"bytes_written\":N}\nPointer is owned by the library until the next logger_stats/logger_last_error\ncall on the same handle, or logger_close. Do not free it.\nReturns NULL for an invalid handle; logger_last_error(NULL) then explains it.",
       "returns": "string",
-      "args": [
-        { "name": "handle", "type": "handle" }
-      ]
+      "args": [{ "name": "handle", "type": "handle" }]
     },
     {
       "name": "logger_last_error",
       "doc": "Last error for the handle. Pass NULL for global create/load errors.\nPointer is owned by the library until the next error/stats call on that\nscope (handle or global), or logger_close. Do not free it.",
       "returns": "string",
-      "args": [
-        { "name": "handle", "type": "handle", "nullable": true }
-      ]
+      "args": [{ "name": "handle", "type": "handle", "nullable": true }]
     },
     {
       "name": "logger_free_string",
       "doc": "Optional free helper. Current ownership policy does not require callers\nto free strings returned by logger_stats / logger_last_error.",
       "returns": "void",
-      "args": [
-        { "name": "s", "type": "string", "mutable": true }
-      ]
+      "args": [{ "name": "s", "type": "string", "mutable": true }]
+    },
+    {
+      "name": "logger_create_from_config_file",
+      "doc": "Create a logger from a config file path (YAML or JSON).\nIf path is empty, checks POLYGLOT_CONFIG_PATH environment variable.\nIf neither found, uses defaults. Returns handle on success, NULL on failure.",
+      "args": [{ "name": "config_path", "type": "string" }],
+      "returns": "handle"
     }
   ]
 }

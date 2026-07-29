@@ -92,6 +92,8 @@ LOGGER_API const char* logger_last_error(logger_handle handle);
  */
 LOGGER_API void logger_free_string(char* s);
 
+LOGGER_API int logger_create_from_config_file(const char* config_path);
+
 #ifdef __cplusplus
 }
 #endif

@@ -84,4 +84,7 @@ internal static partial class NativeMethods
     [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
     internal static extern void logger_free_string(IntPtr s);
 
+    [DllImport(LibraryName, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern int logger_create_from_config_file([MarshalAs(UnmanagedType.LPUTF8Str)] string configPath);
+
 }

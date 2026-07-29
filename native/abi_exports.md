@@ -18,6 +18,7 @@ Generated from `api/abi.json`. Each function must have a matching
 | `logger_stats` | `string` | handle handle |
 | `logger_last_error` | `string` | handle handle |
 | `logger_free_string` | `void` | string s |
+| `logger_create_from_config_file` | `int` | string config_path |
 
 After editing `api/abi.json` or `native/export.go`, run:
 

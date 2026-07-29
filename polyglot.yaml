@@ -1,0 +1,50 @@
+# Polyglot Logger Project-Wide Configuration
+# This file is automatically discovered by all language bindings.
+# Place it in your project root, and it will be auto-loaded without manual configuration.
+
+# Service identifier (required)
+service: polyglot-app
+
+# Service version (optional)
+service_version: "1.0.0"
+
+# Environment name (optional)
+environment: dev
+
+# Log level (trace, debug, info, warn, error, fatal)
+level: info
+
+# Console output
+stdout: true
+
+# File sink configuration
+file:
+  enabled: true
+  path: ./logs/app.log
+  max_size_mb: 100
+  max_backups: 10
+  max_age_days: 30
+  compress: false
+
+# HTTP sink for centralized logging (e.g., Grafana Loki, custom collector)
+http:
+  enabled: false
+  url: https://collector.example.com/v1/logs
+  timeout_ms: 5000
+  headers:
+    Authorization: "Bearer YOUR_TOKEN"
+    X-Custom-Header: "value"
+  batch_size: 50
+  flush_interval_ms: 1000
+
+# Async queue settings
+async: true
+queue_size: 10000
+
+# Overflow policy when queue is full (drop_newest, drop_oldest, block)
+overflow: drop_newest
+
+# Global context fields (added to every log entry)
+fields:
+  region: us-east-1
+  cluster: prod

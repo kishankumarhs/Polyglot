@@ -7,6 +7,7 @@ import "C"
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"unsafe"
 
@@ -326,6 +327,50 @@ func logger_free_string(s *C.char) {
 	// No-op: stats/error/version strings are owned by the library.
 	// Retained so bindings can call it safely without double-free risk.
 	_ = s
+}
+
+// logger_create_from_config_file loads configuration from a file path and creates a logger.
+// Supports both JSON and YAML formats (auto-detected by extension).
+// Path should be an absolute or relative path. If empty string, uses DefaultConfig.
+// Returns NULL and sets global error on failure.
+// Defensive: uses defer recover() to catch panics; prints to stderr instead of crashing.
+//
+//export logger_create_from_config_file
+func logger_create_from_config_file(configPath *C.char) unsafe.Pointer {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_create_from_config_file: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] FATAL: %v\n", err)
+			setGlobalErr(err)
+		}
+	}()
+
+	path := goString(configPath)
+	cfg, err := core.LoadConfigFromFile(path)
+	if err != nil {
+		setGlobalErr(err)
+		return nil
+	}
+
+	log, err := core.New(cfg)
+	if err != nil {
+		setGlobalErr(err)
+		return nil
+	}
+
+	handle := handles.acquire()
+	if handle == nil {
+		_ = log.Close()
+		setGlobalErr(fmt.Errorf("out of memory allocating logger handle"))
+		return nil
+	}
+
+	inst := &nativeInstance{log: log}
+	mu.Lock()
+	loggers[handleID(handle)] = inst
+	mu.Unlock()
+	setGlobalErr(nil)
+	return handle
 }
 
 func main() {}

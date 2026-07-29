@@ -45,4 +45,6 @@ def bind(lib: Any) -> Any:
     lib.logger_last_error.restype = ctypes.c_char_p
     lib.logger_free_string.argtypes = [ctypes.c_char_p]
     lib.logger_free_string.restype = None
+    lib.logger_create_from_config_file.argtypes = [ctypes.c_char_p]
+    lib.logger_create_from_config_file.restype = ctypes.c_int
     return lib

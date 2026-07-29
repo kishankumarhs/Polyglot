@@ -7,6 +7,65 @@ import { Level, bindNative, type NativeFns } from "./ffi.generated";
 export type LogFields = Record<string, unknown>;
 export { Level };
 
+/**
+ * findProjectConfig() recursively searches for a `polyglot.yaml` file.
+ * Starting from the current working directory, it climbs up the directory tree
+ * until the file is found or the file system root is reached.
+ * Returns the absolute path to the config file, or null if not found.
+ */
+function findProjectConfig(): string | null {
+  let current = process.cwd();
+  const root = path.parse(current).root;
+
+  while (true) {
+    const configPath = path.join(current, "polyglot.yaml");
+    if (fs.existsSync(configPath)) {
+      return path.resolve(configPath);
+    }
+
+    if (current === root) {
+      // Reached filesystem root without finding config
+      return null;
+    }
+
+    current = path.dirname(current);
+  }
+}
+
+/**
+ * initializeFromProjectConfig() automatically loads and applies configuration
+ * from a project-wide polyglot.yaml file if found.
+ * This is called on module import for zero-config initialization.
+ * Failures are logged to stderr but do not throw (defensive error handling).
+ */
+function initializeFromProjectConfig(): void {
+  try {
+    const configPath = findProjectConfig();
+    if (!configPath) {
+      // No config file found; use defaults (not an error)
+      return;
+    }
+
+    // Call the native logger_create_from_config_file to initialize
+    const handle = native().logger_create_from_config_file(configPath);
+    if (!handle) {
+      const err = lastError(null);
+      console.error(
+        `[polyglot-logger] failed to initialize from config file ${configPath}: ${err || "unknown error"}`,
+      );
+      return;
+    }
+
+    // Store the global logger handle for later use if needed
+    globalLoggerHandle = handle;
+  } catch (e) {
+    console.error(`[polyglot-logger] error during auto-initialization:`, e);
+  }
+}
+
+// Global logger handle initialized from project config
+let globalLoggerHandle: unknown = null;
+
 export interface FileOptions {
   enabled?: boolean;
   path: string;
@@ -88,7 +147,7 @@ function resolveLibraryPath(): string {
     }
   }
   throw new LoggerError(
-    `unable to load native logger library ${libraryName()}; searched: ${candidatePaths().join(", ")}`
+    `unable to load native logger library ${libraryName()}; searched: ${candidatePaths().join(", ")}`,
   );
 }
 
@@ -169,7 +228,9 @@ export class Logger {
   private handle: unknown;
 
   constructor(options: LoggerOptions) {
-    const handle = native().logger_create_v1(JSON.stringify(buildConfig(options)));
+    const handle = native().logger_create_v1(
+      JSON.stringify(buildConfig(options)),
+    );
     if (!handle) {
       throw new LoggerError(lastError(null) || "logger_create_v1 failed");
     }
@@ -188,18 +249,26 @@ export class Logger {
       this.handle,
       level,
       message,
-      JSON.stringify(fields ?? {})
+      JSON.stringify(fields ?? {}),
     ) as number;
     if (rc !== 0) {
-      throw new LoggerError(lastError(this.handle) || `logger_log(${level}) failed`);
+      throw new LoggerError(
+        lastError(this.handle) || `logger_log(${level}) failed`,
+      );
     }
   }
 
   logSimple(level: Level | number, message: string): void {
     this.ensureOpen();
-    const rc = native().logger_log_simple(this.handle, level, message) as number;
+    const rc = native().logger_log_simple(
+      this.handle,
+      level,
+      message,
+    ) as number;
     if (rc !== 0) {
-      throw new LoggerError(lastError(this.handle) || "logger_log_simple failed");
+      throw new LoggerError(
+        lastError(this.handle) || "logger_log_simple failed",
+      );
     }
   }
 
@@ -230,15 +299,29 @@ export class Logger {
 
   setFields(fields: LogFields): void {
     this.ensureOpen();
-    if ((native().logger_set_fields(this.handle, JSON.stringify(fields)) as number) !== 0) {
-      throw new LoggerError(lastError(this.handle) || "logger_set_fields failed");
+    if (
+      (native().logger_set_fields(
+        this.handle,
+        JSON.stringify(fields),
+      ) as number) !== 0
+    ) {
+      throw new LoggerError(
+        lastError(this.handle) || "logger_set_fields failed",
+      );
     }
   }
 
   reloadConfig(config: Record<string, unknown>): void {
     this.ensureOpen();
-    if ((native().logger_reload_config(this.handle, JSON.stringify(config)) as number) !== 0) {
-      throw new LoggerError(lastError(this.handle) || "logger_reload_config failed");
+    if (
+      (native().logger_reload_config(
+        this.handle,
+        JSON.stringify(config),
+      ) as number) !== 0
+    ) {
+      throw new LoggerError(
+        lastError(this.handle) || "logger_reload_config failed",
+      );
     }
   }
 
@@ -268,3 +351,6 @@ export class Logger {
     }
   }
 }
+
+// Auto-initialize from project-wide polyglot.yaml on module import
+initializeFromProjectConfig();

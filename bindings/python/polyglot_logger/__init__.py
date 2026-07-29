@@ -6,6 +6,7 @@ import ctypes
 import json
 import os
 import platform
+import sys
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
@@ -86,6 +87,89 @@ def _native() -> _Native:
     if _NATIVE is None:
         _NATIVE = _Native()
     return _NATIVE
+
+
+def _find_project_config() -> Optional[str]:
+    """Recursively search for a polyglot.yaml file.
+    
+    Starting from the current working directory, climbs up the directory tree
+    until the file is found or the file system root is reached.
+    Returns the absolute path to the config file, or None if not found.
+    """
+    current = Path.cwd()
+    root = Path(current.anchor)
+    
+    while True:
+        config_path = current / "polyglot.yaml"
+        if config_path.exists():
+            return str(config_path.resolve())
+        
+        if current == root:
+            # Reached filesystem root without finding config
+            return None
+        
+        current = current.parent
+
+
+def _initialize_from_project_config() -> None:
+    """Automatically load configuration from a project-wide polyglot.yaml file.
+    
+    This is called on module import for zero-config initialization.
+    Failures are logged to stderr but do not raise exceptions (defensive error handling).
+    """
+    try:
+        config_path = _find_project_config()
+        if not config_path:
+            # No config file found; use defaults (not an error)
+            return
+        
+        # Read the YAML file and load the configuration
+        try:
+            import yaml
+        except ImportError:
+            # YAML support not available; silently fall back to defaults
+            print(
+                "[polyglot-logger] PyYAML not installed; skipping config file auto-load. "
+                "Install it with: pip install pyyaml",
+                file=sys.stderr,
+            )
+            return
+        
+        with open(config_path, "r", encoding="utf-8") as f:
+            config_data = yaml.safe_load(f)
+        
+        if not config_data or not isinstance(config_data, dict):
+            print(
+                f"[polyglot-logger] invalid or empty config file: {config_path}",
+                file=sys.stderr,
+            )
+            return
+        
+        # Call the native logger_create_from_config_file to initialize
+        native = _native()
+        # Pass the config path as UTF-8 encoded bytes
+        config_path_bytes = config_path.encode("utf-8")
+        handle = native.lib.logger_create_from_config_file(config_path_bytes)
+        if not handle:
+            err = native.last_error(None)
+            print(
+                f"[polyglot-logger] failed to initialize from config file {config_path}: {err or 'unknown error'}",
+                file=sys.stderr,
+            )
+            return
+        
+        # Store the global logger handle for later use
+        global _global_logger_handle
+        _global_logger_handle = handle
+    except Exception as e:
+        print(
+            f"[polyglot-logger] error during auto-initialization: {e}",
+            file=sys.stderr,
+        )
+
+
+# Global logger handle initialized from project config (for potential future use)
+_global_logger_handle: Optional[int] = None
 
 
 def library_version() -> str:
@@ -300,6 +384,10 @@ class Logger:
             self.close()
         except Exception:
             pass
+
+
+# Auto-initialize from project-wide polyglot.yaml on module import
+_initialize_from_project_config()
 
 
 __all__ = ["Logger", "LoggerError", "Level", "library_version", "abi_version"]

@@ -1,0 +1,305 @@
+name: Build & Release Polyglot Logger
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 0.2.0)"
+        required: true
+
+jobs:
+  # Build native libraries for all platforms
+  build-native:
+    name: Build Native Library (${{ matrix.os }})
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          # Linux
+          - os: linux
+            runs-on: ubuntu-latest
+            target: linux
+            arch: x86_64
+            lib: liblogger.so
+          # macOS
+          - os: macos
+            runs-on: macos-13
+            target: darwin
+            arch: x86_64
+            lib: liblogger.dylib
+          - os: macos-arm
+            runs-on: macos-13
+            target: darwin
+            arch: arm64
+            lib: liblogger.dylib
+          # Windows
+          - os: windows
+            runs-on: windows-latest
+            target: windows
+            arch: x86_64
+            lib: logger.dll
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.25"
+
+      - name: Setup GCC (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup MinGW (Windows)
+        if: matrix.os == 'windows'
+        uses: msys2/setup-msys2@v3
+        with:
+          msystem: mingw64
+          install: mingw-w64-x86_64-gcc mingw-w64-x86_64-make
+
+      - name: Build native library
+        run: bash ./scripts/build-native.sh dist/${{ matrix.os }}/${{ matrix.arch }}
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.target }}
+          GOARCH: ${{ matrix.arch }}
+
+      - name: Upload native library
+        uses: actions/upload-artifact@v3
+        with:
+          name: native-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/${{ matrix.os }}/${{ matrix.arch }}/${{ matrix.lib }}
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v3
+        with:
+          name: checksums-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/${{ matrix.os }}/${{ matrix.arch }}/checksums.sha256
+
+  # Package for npm
+  package-npm:
+    name: Package for npm
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          registry-url: https://registry.npmjs.org/
+
+      - name: Download all native artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Organize native binaries for npm
+        run: |
+          mkdir -p bindings/node/bin
+          # Copy all .so and .dll files
+          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/node/bin/
+          ls -la bindings/node/bin/
+
+      - name: Install dependencies
+        working-directory: bindings/node
+        run: npm ci
+
+      - name: Build TypeScript
+        working-directory: bindings/node
+        run: npm run build
+
+      - name: Package npm tarball
+        working-directory: bindings/node
+        run: npm pack
+
+      - name: Upload npm package
+        uses: actions/upload-artifact@v3
+        with:
+          name: npm-package
+          path: bindings/node/*.tgz
+
+  # Package for PyPI
+  package-python:
+    name: Package for PyPI
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Download all native artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Organize native binaries for Python
+        run: |
+          mkdir -p bindings/python/polyglot_logger/bin
+          # Copy all .so and .dll files
+          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/python/polyglot_logger/bin/
+          ls -la bindings/python/polyglot_logger/bin/
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip setuptools wheel build
+
+      - name: Build Python wheel
+        working-directory: bindings/python
+        run: python -m build
+
+      - name: Upload Python packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-packages
+          path: bindings/python/dist/
+
+  # Package for .NET/NuGet
+  package-dotnet:
+    name: Package for NuGet
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0"
+
+      - name: Download all native artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Organize native binaries for .NET
+        run: |
+          mkdir -p bindings/dotnet/Polyglot.Logger/native
+          # Copy all .so and .dll files
+          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/dotnet/Polyglot.Logger/native/
+          ls -la bindings/dotnet/Polyglot.Logger/native/
+
+      - name: Build NuGet package
+        working-directory: bindings/dotnet/Polyglot.Logger
+        run: dotnet pack -c Release -o ../../dist/
+
+      - name: Upload .NET packages
+        uses: actions/upload-artifact@v3
+        with:
+          name: dotnet-packages
+          path: bindings/dotnet/dist/
+
+  # Create GitHub Release with all artifacts
+  create-release:
+    name: Create GitHub Release
+    needs: [package-npm, package-python, package-dotnet]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: release-artifacts/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-artifacts/npm-package/*.tgz
+            release-artifacts/python-packages/*
+            release-artifacts/dotnet-packages/*.nupkg
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish to npm
+  publish-npm:
+    name: Publish to npm
+    needs: [package-npm, create-release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download npm package
+        uses: actions/download-artifact@v3
+        with:
+          name: npm-package
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          registry-url: https://registry.npmjs.org/
+
+      - name: Publish to npm
+        run: npm publish *.tgz
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # Publish to PyPI
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [package-python, create-release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download Python packages
+        uses: actions/download-artifact@v3
+        with:
+          name: python-packages
+          path: dist/
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install twine
+        run: pip install twine
+
+      - name: Publish to PyPI
+        run: twine upload dist/* --non-interactive
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+  # Publish to NuGet
+  publish-nuget:
+    name: Publish to NuGet
+    needs: [package-dotnet, create-release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download .NET packages
+        uses: actions/download-artifact@v3
+        with:
+          name: dotnet-packages
+          path: dist/
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "8.0"
+
+      - name: Publish to NuGet
+        run: |
+          for file in dist/*.nupkg; do
+            dotnet nuget push "$file" -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
+          done

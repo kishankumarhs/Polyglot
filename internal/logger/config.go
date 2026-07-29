@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Overflow policies for the async queue.
@@ -304,4 +306,69 @@ func parentDir(path string) string {
 		}
 	}
 	return ""
+}
+
+// ParseConfigYAML parses and validates configuration from YAML bytes.
+// Accepts the same schema as JSON (converted to JSON internally).
+func ParseConfigYAML(data []byte) (Config, error) {
+	if len(data) == 0 {
+		return DefaultConfig(), nil
+	}
+
+	// Unmarshal YAML to a generic map, then re-encode as JSON for consistent parsing
+	var yamlData interface{}
+	if err := yaml.Unmarshal(data, &yamlData); err != nil {
+		return Config{}, fmt.Errorf("invalid config yaml: %w", err)
+	}
+
+	// Convert to JSON and parse using existing logic
+	jsonData, err := json.Marshal(yamlData)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to convert yaml to json: %w", err)
+	}
+
+	return ParseConfigJSON(jsonData)
+}
+
+// LoadConfigFromFile loads configuration from a file path.
+// Automatically detects YAML (.yaml, .yml) or JSON (.json) format based on extension.
+// If path is empty string, checks environment variables in order:
+//   - POLYGLOT_CONFIG_PATH
+//   - POLYGLOT_CONFIG_FILE
+// Returns DefaultConfig if no path is found or file does not exist.
+// Returns an error if the file exists but cannot be parsed.
+func LoadConfigFromFile(filePath string) (Config, error) {
+	path := filePath
+	
+	// If no explicit path provided, check environment variables
+	if path == "" {
+		path = os.Getenv("POLYGLOT_CONFIG_PATH")
+		if path == "" {
+			path = os.Getenv("POLYGLOT_CONFIG_FILE")
+		}
+	}
+	
+	if path == "" {
+		return DefaultConfig(), nil
+	}
+
+	// Check if file exists
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File not found; return defaults and non-error (graceful degradation)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] config file not found: %s; using defaults\n", path)
+			return DefaultConfig(), nil
+		}
+		return Config{}, fmt.Errorf("failed to read config file %s: %w", path, err)
+	}
+
+	// Detect format based on file extension
+	lower := strings.ToLower(path)
+	if strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
+		return ParseConfigYAML(data)
+	}
+
+	// Default to JSON parsing
+	return ParseConfigJSON(data)
 }

@@ -10,10 +10,14 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "Polyglot" }]
+keywords = ["logging", "structured", "logger", "native", "performance"]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["polyglot_logger*"]
 
 [tool.setuptools.package-data]
-polyglot_logger = ["native/*"]
+polyglot_logger = ["native/*", "bin/*"]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6.0"]
