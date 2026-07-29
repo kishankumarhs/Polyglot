@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   # Build native libraries for all platforms
@@ -238,6 +239,7 @@ jobs:
         with:
           name: dotnet-packages
           path: bindings/dotnet/dist/
+          if-no-files-found: error
 
   # Create GitHub Release with all artifacts
   create-release:
@@ -348,8 +350,7 @@ jobs:
       - name: Download .NET packages
         uses: actions/download-artifact@v4
         with:
-          name: dotnet-packages
-          path: dist/
+          path: artifacts/
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -358,6 +359,13 @@ jobs:
 
       - name: Publish to NuGet
         run: |
-          for file in dist/*.nupkg; do
+          set -euo pipefail
+          mapfile -t packages < <(find artifacts -type f -name "*.nupkg" ! -name "*.snupkg")
+          if [[ ${#packages[@]} -eq 0 ]]; then
+            echo "No .nupkg files found in downloaded artifacts" >&2
+            exit 1
+          fi
+
+          for file in "${packages[@]}"; do
             dotnet nuget push "$file" -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json --skip-duplicate
           done
