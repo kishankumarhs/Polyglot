@@ -277,7 +277,6 @@ jobs:
             release-artifacts/npm-package/*.tgz
             release-artifacts/python-packages/*
             release-artifacts/dotnet-packages/*.nupkg
-            release-artifacts/checksums-*/*
           draft: false
           prerelease: false
         env:
