@@ -28,6 +28,19 @@ jobs:
             arch: x86_64
             goarch: amd64
             lib: liblogger.so
+          # macOS
+          # - os: macos
+          #   runs-on: macos-13
+          #   target: darwin
+          #   arch: x86_64
+          #   goarch: amd64
+          #   lib: liblogger.dylib
+          # - os: macos-arm
+          #   runs-on: macos-14
+          #   target: darwin
+          #   arch: arm64
+          #   goarch: arm64
+          #   lib: liblogger.dylib
           # Windows
           - os: windows
             runs-on: windows-latest
@@ -245,9 +258,21 @@ jobs:
         with:
           path: release-artifacts/
 
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           files: |
             release-artifacts/npm-package/*.tgz
             release-artifacts/python-packages/*
