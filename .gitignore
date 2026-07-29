@@ -1,0 +1,41 @@
+# Binaries
+dist/
+build/
+*.dll
+*.so
+*.dylib
+*.a
+*.h.gch
+
+# Keep the stable public header
+!native/include/logger.h
+
+# Go
+*.exe
+*.test
+*.out
+vendor/
+
+# Node
+bindings/node/node_modules/
+bindings/node/dist/
+bindings/node/native/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+bindings/python/eximietas_logger/native/
+
+# .NET
+bin/
+obj/
+bindings/dotnet/**/native/
+
+# IDE / OS
+.idea/
+# .vscode/
+.DS_Store
+*.log

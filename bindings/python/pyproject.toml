@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eximietas-logger"
+version = "0.2.0"
+description = "Python bindings for the Eximietas native structured logger"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Eximietas" }]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["eximietas_logger*"]
+
+[tool.setuptools.package-data]
+eximietas_logger = ["native/*"]

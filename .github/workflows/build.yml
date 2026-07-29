@@ -1,0 +1,126 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  go-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y gcc
+      - name: Check formatting
+        run: test -z "$(gofmt -l cmd internal native)" || (gofmt -l cmd internal native && echo "run gofmt -w" && exit 1)
+      - name: Vet
+        run: go vet ./...
+      - name: Test Go core and native layer
+        run: go test ./... -race -count=1
+      - name: Codegen drift check
+        run: |
+          go run ./cmd/codegen
+          git diff --exit-code -- native/include/logger.h bindings/python/eximietas_logger/_ffi_generated.py bindings/node/src/ffi.generated.ts bindings/dotnet/Eximietas.Logger/NativeMethods.Generated.cs || (echo "codegen drift: run go run ./cmd/codegen and commit" && exit 1)
+
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: liblogger.so
+          - os: windows-latest
+            artifact: logger.dll
+          - os: macos-latest
+            artifact: liblogger.dylib
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - name: Install Linux build tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y gcc
+      - name: Build native library (Unix)
+        if: runner.os != 'Windows'
+        run: bash scripts/build-native.sh dist
+      - name: Build native library (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: bash scripts/build-native.sh dist
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.os }}
+          path: |
+            dist/${{ matrix.artifact }}
+            dist/logger.h
+            dist/checksums.sha256
+
+  python-smoke:
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build native library
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc
+          bash scripts/build-native.sh dist
+      - name: Install and test
+        run: |
+          python -m pip install pytest
+          python -m pip install -e bindings/python
+          pytest bindings/python/tests -q
+
+  node-smoke:
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build native library
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc
+          bash scripts/build-native.sh dist
+      - name: Install, build, test
+        working-directory: bindings/node
+        run: |
+          npm install
+          npm run build
+          export EXIMIETAS_LOGGER_LIB=$GITHUB_WORKSPACE/dist/liblogger.so
+          npm test
+
+  dotnet-smoke:
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build native library
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc
+          bash scripts/build-native.sh dist
+      - name: Test
+        env:
+          EXIMIETAS_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+        run: dotnet test bindings/dotnet/Eximietas.Logger.Tests/Eximietas.Logger.Tests.csproj -c Release

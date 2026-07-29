@@ -1,0 +1,23 @@
+{
+  "name": "@eximietas/logger",
+  "version": "0.2.0",
+  "description": "Node.js / TypeScript bindings for the Eximietas native structured logger",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/smoke.test.js"
+  },
+  "dependencies": {
+    "koffi": "^2.9.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "license": "MIT"
+}

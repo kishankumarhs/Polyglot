@@ -1,0 +1,15 @@
+{
+  "go.toolsEnvVars": {
+    "CGO_ENABLED": "1",
+    "CC": "C:\\Users\\Kishan\\scoop\\apps\\mingw\\current\\bin\\gcc.exe",
+    "CXX": "C:\\Users\\Kishan\\scoop\\apps\\mingw\\current\\bin\\g++.exe",
+    "PATH": "C:\\Users\\Kishan\\scoop\\apps\\mingw\\current\\bin;${env:PATH}"
+  },
+  "gopls": {
+    "build.env": {
+      "CGO_ENABLED": "1",
+      "CC": "C:\\Users\\Kishan\\scoop\\apps\\mingw\\current\\bin\\gcc.exe",
+      "CXX": "C:\\Users\\Kishan\\scoop\\apps\\mingw\\current\\bin\\g++.exe"
+    }
+  }
+}

@@ -1,0 +1,129 @@
+{
+  "abi_version": 1,
+  "library": "logger",
+  "header_guard": "EXIMIETAS_LOGGER_H",
+  "enums": [
+    {
+      "name": "LoggerLevel",
+      "c_prefix": "LOGGER_",
+      "doc": "Integer levels (stable ABI).",
+      "values": [
+        { "name": "TRACE", "value": 0 },
+        { "name": "DEBUG", "value": 1 },
+        { "name": "INFO", "value": 2 },
+        { "name": "WARN", "value": 3 },
+        { "name": "ERROR", "value": 4 },
+        { "name": "FATAL", "value": 5 }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "logger_version",
+      "doc": "Library / ABI versioning.",
+      "returns": "string",
+      "args": []
+    },
+    {
+      "name": "logger_abi_version",
+      "doc": "currently 1",
+      "returns": "int",
+      "args": []
+    },
+    {
+      "name": "logger_create_v1",
+      "doc": "Create a logger from JSON config (schema v1).\nReturns a non-NULL handle on success, NULL on failure.\nOn failure, call logger_last_error(NULL) for the message.",
+      "returns": "handle",
+      "args": [
+        { "name": "config_json", "type": "string" }
+      ]
+    },
+    {
+      "name": "logger_create",
+      "doc": "Alias of logger_create_v1 for early consumers.",
+      "returns": "handle",
+      "args": [
+        { "name": "config_json", "type": "string" }
+      ]
+    },
+    {
+      "name": "logger_log",
+      "doc": "Emit a structured log.\nfields_json may be NULL or \"{}\" for no extra fields.\nReturns 0 on success, -1 on failure.",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" },
+        { "name": "level", "type": "int" },
+        { "name": "message", "type": "string" },
+        { "name": "fields_json", "type": "string", "nullable": true }
+      ]
+    },
+    {
+      "name": "logger_log_simple",
+      "doc": "Emit a log with no extra fields.",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" },
+        { "name": "level", "type": "int" },
+        { "name": "message", "type": "string" }
+      ]
+    },
+    {
+      "name": "logger_set_fields",
+      "doc": "Replace runtime context fields (merged into every subsequent log).",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" },
+        { "name": "fields_json", "type": "string" }
+      ]
+    },
+    {
+      "name": "logger_reload_config",
+      "doc": "Hot-reload configuration JSON.",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" },
+        { "name": "config_json", "type": "string" }
+      ]
+    },
+    {
+      "name": "logger_flush",
+      "doc": "Drain async queue and sync sinks.",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" }
+      ]
+    },
+    {
+      "name": "logger_close",
+      "doc": "Stop worker, flush, and free the logger.",
+      "returns": "int",
+      "args": [
+        { "name": "handle", "type": "handle" }
+      ]
+    },
+    {
+      "name": "logger_stats",
+      "doc": "Stats JSON: {\"queued\":N,\"dropped\":N,\"flushed\":N,\"bytes_written\":N}\nPointer is owned by the library until the next logger_stats/logger_last_error\ncall on the same handle, or logger_close. Do not free it.\nReturns NULL for an invalid handle; logger_last_error(NULL) then explains it.",
+      "returns": "string",
+      "args": [
+        { "name": "handle", "type": "handle" }
+      ]
+    },
+    {
+      "name": "logger_last_error",
+      "doc": "Last error for the handle. Pass NULL for global create/load errors.\nPointer is owned by the library until the next error/stats call on that\nscope (handle or global), or logger_close. Do not free it.",
+      "returns": "string",
+      "args": [
+        { "name": "handle", "type": "handle", "nullable": true }
+      ]
+    },
+    {
+      "name": "logger_free_string",
+      "doc": "Optional free helper. Current ownership policy does not require callers\nto free strings returned by logger_stats / logger_last_error.",
+      "returns": "void",
+      "args": [
+        { "name": "s", "type": "string", "mutable": true }
+      ]
+    }
+  ]
+}
