@@ -67,17 +67,20 @@ jobs:
         uses: msys2/setup-msys2@v4
         with:
           msystem: mingw64
+          update: true
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-make
 
       - name: Build native library (Windows)
         if: matrix.os == 'windows'
         shell: msys2 {0}
-        run: ./scripts/build-native.sh dist/${{ matrix.os }}/${{ matrix.arch }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          ./scripts/build-native.sh dist/${{ matrix.os }}/${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.target }}
           GOARCH: ${{ matrix.arch }}
-          CC: x86_64-w64-mingw32-gcc
+          CC: gcc
 
       - name: Build native library (Unix)
         if: matrix.os != 'windows'
