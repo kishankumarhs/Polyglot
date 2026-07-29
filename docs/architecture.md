@@ -1,84 +1,172 @@
 # Architecture
 
-## Overview
+## Modular Monorepo Structure
+
+Polyglot uses a **modular monorepo** pattern where the core Go implementation and each language binding are independent Git repositories connected via Git submodules.
 
 ```text
-api/abi.json
-     │
-     ▼  go run ./cmd/codegen
-┌────────────────────────────────────────────┐
-│  native/include/logger.h                   │
-│  bindings/*/… FFI generated files          │
-└────────────────────────────────────────────┘
-     │
-Language SDK (hand-written ergonomics)
-     │
-     ▼
-C ABI v1  (shared library: .so / .dll / .dylib)
-     │
-     ▼
-Go core  (internal/logger)
-     │
-     ├─ async queue + overflow
-     ├─ JSON Entry serialization
-     └─ sinks: stdout | file | http
+┌─────────────────────────────────────────────────────────────┐
+│              polyglot-go (Core Repository)                  │
+│          Single source of truth for ABI & logging           │
+│                                                             │
+│  api/abi.json ──→ cmd/codegen ──→ FFI for all languages   │
+│      ↓              ↓                    ↓                  │
+│  C ABI v1      Go implementation   Language bindings        │
+└─────────────────────────────────────────────────────────────┘
+      │                    │                  │
+      ├────────────────────┼──────────────────┤
+      │                    │                  │
+      ▼                    ▼                  ▼
+ ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐
+ │ polyglot-   │  │ polyglot-    │  │ polyglot-csharp  │
+ │ node        │  │ py           │  │ (Git Submodule)  │
+ │ (Git        │  │ (Git         │  │                  │
+ │ Submodule)  │  │ Submodule)   │  │ npm package:     │
+ │             │  │              │  │ Polyglot.Logger  │
+ │ npm package:│  │ npm package: │  └──────────────────┘
+ │ @polyglot/  │  │ polyglot-    │
+ │ logger      │  │ logger       │
+ └─────────────┘  └──────────────┘
 ```
 
-Goals:
+**Key principle:** Each binding is a complete, independently-versioned Git repository. The core repository tracks specific commits from each binding via `.gitmodules`.
 
-- **Single source of truth** for formatting, rotation, async, and shipping
-- **Stable ABI** so internals can change without breaking consumers
-- **Thin bindings** — no duplicated log logic in Python/Node/.NET
+## Repository Details
 
-## Packages
+| Repository | Type | Purpose | Package |
+|------------|------|---------|----------|
+| **polyglot-go** | Core | Go logger, ABI contract, codegen | N/A |
+| **polyglot-node** | Submodule | Node.js/TypeScript bindings | npm @polyglot/logger |
+| **polyglot-py** | Submodule | Python bindings | PyPI polyglot-logger |
+| **polyglot-csharp** | Submodule | .NET bindings | NuGet Polyglot.Logger |
+
+## Core Repository Structure
 
 | Path | Role |
-| ---- | ---- |
-| `internal/logger` | Core implementation |
-| `native/` | CGO `//export` wrappers + generated header |
-| `api/abi.json` | ABI contract for codegen |
-| `cmd/codegen` | Generates header + FFI stubs |
-| `cmd/logger-demo` | Go demo binary |
-| `bindings/{python,node,dotnet}` | Idiomatic SDKs |
-| `examples/` | Minimal consumers |
-| `scripts/` | Native build |
-| `docs/` | This documentation |
+|------|------|
+| `api/abi.json` | **C ABI contract** — single source of truth |
+| `internal/logger/` | Go core implementation |
+| `native/` | CGO exports + `logger.h` generation |
+| `cmd/codegen/` | Generates FFI for all bindings |
+| `cmd/logger-demo/` | Go demo/test program |
+| `bindings/node/` | Git submodule → polyglot-node |
+| `bindings/python/` | Git submodule → polyglot-py |
+| `bindings/dotnet/` | Git submodule → polyglot-csharp |
+| `examples/` | Example usage across languages |
+| `scripts/` | Cross-platform native build scripts |
+| `docs/` | Documentation hub |
 
-## Async pipeline
+## Code Generation Flow
+
+The `cmd/codegen` tool is the **bridge** between core implementation and language bindings:
 
 ```text
-Log() → serialize Entry → enqueue(overflow policy)
-                              │
-                         worker goroutine
-                              │
-                    writePayload → each Sink.Write
-                              │
-                    Flush / Close → flushSinks + closeSinks
+api/abi.json (C ABI contract)
+        │
+        ▼ go run ./cmd/codegen
+        │
+        ├─→ Parses abi.json
+        ├─→ Verifies consistency with native/export.go
+        ├─→ Generates native/include/logger.h
+        │
+        └─→ For each language binding:
+            ├─→ bindings/node/src/ffi.generated.ts
+            ├─→ bindings/python/polyglot_logger/_ffi_generated.py
+            └─→ bindings/dotnet/Polyglot.Logger/NativeMethods.Generated.cs
 ```
 
-## Handle lifecycle (native)
+**Important:** Codegen-generated files are **read-only**. Hand-write SDK code in separate files.
 
-Opaque `logger_handle` values are distinct C addresses used as map keys (never dereferenced by callers).
+## Async Pipeline
 
-- On create: acquire an address from a handle pool
-- On close: remove from map, free string buffers, **retire** the address
-- Stale handles resolve to “invalid logger handle” rather than aliasing another logger (until addresses recycle after 1024 retirements)
+Async logging uses a single worker goroutine per logger instance to serialize all sink writes:
 
-## Codegen boundary
+```text
+Log() call (any language)
+    ↓
+Create Entry struct
+    ↓
+enqueue(entry, overflow_policy)
+    ├─ drop_newest: Drop oldest if queue full
+    ├─ drop_oldest: Drop newest if queue full
+    └─ block: Block caller until space available
+    ↓
+Worker Goroutine processes continuously:
+    ├─→ Dequeue entry
+    ├─→ Format Entry → JSON
+    ├─→ For each Sink: Sink.Write(json)
+    └─→ Update stats (queued, dropped, errors)
+    ↓
+Flush/Close: Wait for worker to finish pending work
+```
 
-| Hand-written | Generated |
-| ------------ | --------- |
-| `internal/logger/*` | `native/include/logger.h` |
-| `native/export.go` | `*_ffi_generated.py`, `ffi.generated.ts`, `NativeMethods.Generated.cs` |
-| Binding `Logger` classes | `native/abi_exports.md` checklist |
+**Key:** All sink writes are serialized. No race conditions.
 
-`cmd/codegen` verifies that every `api/abi.json` function has a matching `//export` (and vice versa), including argument count, **before** writing outputs.
+## Handle Lifecycle (Native)
 
-## Thread safety model
+Opaque `logger_handle` values are distinct addresses used as map keys:
 
-The Go core serializes sink access through the worker (async) or through logger locks (sync). Bindings pass through; they do not add their own global locks beyond what the native library provides.
+```text
+logger_create()
+    ├─ Acquire address from handle pool
+    ├─ Create new Logger struct
+    ├─ Insert into global map: handles[addr] = logger
+    └─ Return addr to caller
 
-## Related
+logger_log(handle, ...)
+    ├─ Look up: logger = handles[handle]
+    └─ If found: queue entry; else: error
 
-- [ABI & codegen](abi.md)
-- [Build](build.md)
+logger_close(handle)
+    ├─ Look up: logger = handles[handle]
+    ├─ Flush queued entries
+    ├─ Close sinks
+    ├─ Remove from map
+    └─ Mark address as retired (available for reuse)
+```
+
+**Stale handles:** If a caller uses a handle after `close()`, the lookup fails. No aliasing to a different logger.
+
+## Codegen Verification
+
+`cmd/codegen` ensures consistency before writing any output:
+
+```text
+For each function in api/abi.json:
+    ├─ Verify //export exists in native/export.go
+    ├─ Verify argument count matches
+    ├─ Verify return type matches
+    └─ If any mismatch: FAIL and report error
+
+For each //export in native/export.go:
+    ├─ Verify function in api/abi.json
+    └─ If not found: FAIL and report error
+```
+
+This ensures the C header and all FFI bindings stay in sync.
+
+## Thread Safety
+
+The Go core ensures thread safety through serialization:
+
+- **Async mode:** Single worker goroutine serializes all sink writes
+- **Sync mode:** Logger mutex protects shared state
+- **Bindings:** Just pass through; no additional locking needed
+
+A single logger instance is **safe for concurrent `Log`, `Stats`, `SetFields`, `ReloadConfig` calls**. Only `Close` should be single-threaded.
+
+## Submodule Integration Benefits
+
+1. **Independent Versioning:** Each language can release at its own pace
+2. **Clean History:** Core repo history is about Go implementation
+3. **Modular Development:** Add a new language? Just add a new submodule
+4. **Stable ABIs:** Bindings only depend on C function signatures
+5. **Parallel Testing:** Each binding's tests run independently
+
+## Related Documentation
+
+- [All Repositories Overview](REPOSITORIES.md)
+- [Submodule Workflow](SUBMODULE-WORKFLOW.md)
+- [ABI Contract Details](abi.md)
+- [Building Guide](build.md)
+- [Getting Started](getting-started.md)

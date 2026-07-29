@@ -4,19 +4,35 @@ Cross-language structured logger: a **Go core** compiled to a native shared libr
 
 One place owns JSON formatting, async queuing, file rotation, and HTTP shipping. Language SDKs stay thin wrappers over a stable **C ABI v1**.
 
-## Documentation
+## 📚 Documentation
 
-**Start with the docs hub:** [`docs/README.md`](docs/README.md)
+**Start with:** [`docs/REPOSITORIES.md`](docs/REPOSITORIES.md) for the modular architecture overview
 
 | Guide | Description |
 | ----- | ----------- |
+| [Repositories](docs/REPOSITORIES.md) | All repositories & how they connect |
+| [Submodule Workflow](docs/SUBMODULE-WORKFLOW.md) | Development with Git submodules |
+| [Quick Reference](SUBMODULE-QUICK-REFERENCE.md) | Fast lookup for common tasks |
 | [Getting started](docs/getting-started.md) | Build the library and run your first log |
 | [User guide](docs/user-guide.md) | Levels, fields, async, stats, lifecycle |
 | [Configuration](docs/configuration.md) | Full JSON schema and presets |
 | [Sinks & Loki/Grafana](docs/sinks.md) | Stdout, file, HTTP centralization |
 | [Python](docs/languages/python.md) · [Node](docs/languages/node.md) · [.NET](docs/languages/dotnet.md) · [Go](docs/languages/go.md) · [C](docs/languages/c.md) | Language APIs |
-| [Monorepo (Turborepo)](docs/monorepo.md) | Use this package in an existing workspace |
 | [Build](docs/build.md) · [Architecture](docs/architecture.md) · [Troubleshooting](docs/troubleshooting.md) | Operators & maintainers |
+
+## 🏗️ Repository Structure
+
+```
+polyglot-go (core)                  — Single source of truth for ABI & implementation
+├── bindings/node                   — Git submodule → polyglot-node
+├── bindings/python                 — Git submodule → polyglot-py
+└── bindings/dotnet                 — Git submodule → polyglot-csharp
+```
+
+**Independent packages:**
+- 📦 npm: `@polyglot/logger` ([polyglot-node](https://github.com/kishankumarhs/polyglot-node))
+- 📦 PyPI: `polyglot-logger` ([polyglot-py](https://github.com/kishankumarhs/polyglot-py))
+- 📦 NuGet: `Polyglot.Logger` ([polyglot-csharp](https://github.com/kishankumarhs/polyglot-csharp))
 
 ## Features
 
