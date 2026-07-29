@@ -1,0 +1,33 @@
+# Polyglot CODEOWNERS
+
+# Default ownership
+
+- @kishankumarhs
+
+# Core logger implementation
+
+internal/logger/ @kishankumarhs
+native/ @kishankumarhs
+cmd/logger-demo/ @kishankumarhs
+
+# Language bindings
+
+bindings/python/ @kishankumarhs
+bindings/node/ @kishankumarhs
+bindings/dotnet/ @kishankumarhs
+
+# Documentation
+
+docs/ @kishankumarhs
+README.md @kishankumarhs
+
+# Build and CI/CD
+
+Makefile @kishankumarhs
+scripts/ @kishankumarhs
+.github/workflows/ @kishankumarhs
+
+# API and codegen
+
+api/ @kishankumarhs
+cmd/codegen/ @kishankumarhs
