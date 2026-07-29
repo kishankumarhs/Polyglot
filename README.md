@@ -1,4 +1,4 @@
-# Polyglot Logger
+# Polyglot
 
 Cross-language structured logger: a **Go core** compiled to a native shared library (`.so` / `.dll` / `.dylib`), plus idiomatic bindings for **Python**, **Node.js/TypeScript**, and **.NET**.
 
