@@ -92,7 +92,12 @@ LOGGER_API const char* logger_last_error(logger_handle handle);
  */
 LOGGER_API void logger_free_string(char* s);
 
-LOGGER_API int logger_create_from_config_file(const char* config_path);
+/*
+ * Create a logger from a config file path (YAML or JSON).
+ * If path is empty, checks POLYGLOT_CONFIG_PATH environment variable.
+ * If neither found, uses defaults. Returns handle on success, NULL on failure.
+ */
+LOGGER_API logger_handle logger_create_from_config_file(const char* config_path);
 
 #ifdef __cplusplus
 }
