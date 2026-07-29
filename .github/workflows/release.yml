@@ -26,23 +26,27 @@ jobs:
             runs-on: ubuntu-latest
             target: linux
             arch: x86_64
+            goarch: amd64
             lib: liblogger.so
           # macOS
           - os: macos
             runs-on: macos-13
             target: darwin
             arch: x86_64
+            goarch: amd64
             lib: liblogger.dylib
           - os: macos-arm
             runs-on: macos-14
             target: darwin
             arch: arm64
+            goarch: arm64
             lib: liblogger.dylib
           # Windows
           - os: windows
             runs-on: windows-latest
             target: windows
             arch: x86_64
+            goarch: amd64
             lib: logger.dll
     steps:
       - name: Checkout code
@@ -79,7 +83,7 @@ jobs:
         env:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.target }}
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.goarch }}
           CC: gcc
 
       - name: Build native library (Unix)
@@ -88,7 +92,7 @@ jobs:
         env:
           CGO_ENABLED: 1
           GOOS: ${{ matrix.target }}
-          GOARCH: ${{ matrix.arch }}
+          GOARCH: ${{ matrix.goarch }}
 
       - name: Upload native library
         uses: actions/upload-artifact@v4
