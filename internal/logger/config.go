@@ -335,11 +335,12 @@ func ParseConfigYAML(data []byte) (Config, error) {
 // If path is empty string, checks environment variables in order:
 //   - POLYGLOT_CONFIG_PATH
 //   - POLYGLOT_CONFIG_FILE
+//
 // Returns DefaultConfig if no path is found or file does not exist.
 // Returns an error if the file exists but cannot be parsed.
 func LoadConfigFromFile(filePath string) (Config, error) {
 	path := filePath
-	
+
 	// If no explicit path provided, check environment variables
 	if path == "" {
 		path = os.Getenv("POLYGLOT_CONFIG_PATH")
@@ -347,7 +348,7 @@ func LoadConfigFromFile(filePath string) (Config, error) {
 			path = os.Getenv("POLYGLOT_CONFIG_FILE")
 		}
 	}
-	
+
 	if path == "" {
 		return DefaultConfig(), nil
 	}
