@@ -1,18 +1,45 @@
-# Node.js / TypeScript guide
+# Node.js / TypeScript Guide
 
-Package: `@polyglot/logger` (`bindings/node`).
+**Package:** `@polyglot/logger` ([npm](https://www.npmjs.com/package/@polyglot/logger))  
+**Repository:** [polyglot-node](https://github.com/kishankumarhs/polyglot-node) (Git submodule)  
+**Status:** Independent package with bundled native binaries
 
-## Install
+## Overview
+
+This binding provides idiomatic Node.js/TypeScript access to the Polyglot native logger. It's part of a [modular monorepo](../architecture.md) where:
+
+- **Core:** Go logger in [polyglot-go](https://github.com/kishankumarhs/Polyglot)
+- **This binding:** Independent Node.js repository with its own releases
+- **Generated code:** FFI bindings auto-generated from C ABI contract
+- **Native binaries:** Pre-compiled for Windows/macOS/Linux, bundled in npm package
+
+See [REPOSITORIES.md](../REPOSITORIES.md) for how all four repositories work together.
+
+## Installation
+
+### From npm (Recommended)
 
 ```bash
+npm install @polyglot/logger
+```
+
+Pre-compiled native binaries are included. No build needed.
+
+### From Source (Core Development)
+
+If working on the core Polyglot repository:
+
+```bash
+git clone --recurse-submodules https://github.com/kishankumarhs/Polyglot.git
+cd Polyglot
+
+make build-native
 cd bindings/node
 npm install
 npm run build
 ```
 
-In a monorepo workspace, depend on `"@polyglot/logger": "*"` and ensure the native library is built. See [monorepo](../monorepo.md).
-
-## Quick start
+## Quick Start
 
 ```ts
 import {
@@ -44,6 +71,55 @@ log.flush();
 console.log(log.stats());
 log.close();
 ```
+
+## Configuration
+
+### Via polyglot.yaml
+
+Create `polyglot.yaml` in project root (auto-discovered):
+
+```yaml
+service: checkout-api
+environment: prod
+logging:
+  level: info
+  async: true
+file:
+  enabled: true
+  path: /var/log/checkout.log
+  max_size_mb: 100
+http:
+  enabled: false
+  endpoint: https://logs.company.com/ingest
+```
+
+### Programmatic Configuration
+
+```ts
+const log = new Logger({
+  service: "checkout-api",
+  environment: "prod",
+  level: "info",
+  async: true,
+  stdout: false,
+  file: {
+    enabled: true,
+    path: "/var/log/checkout.log",
+    maxSizeMb: 100,
+  },
+});
+```
+
+### Environment Variables
+
+```bash
+export POLYGLOT_CONFIG_PATH=/etc/myapp/polyglot.yaml
+export POLYGLOT_CONFIG_FILE=/etc/myapp/config.json
+```
+
+## API Reference
+
+### Logger Constructor
 
 ## Options (`LoggerOptions`)
 

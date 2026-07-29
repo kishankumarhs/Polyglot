@@ -1,14 +1,32 @@
-# Go guide (direct core)
+# Go Guide (Core Implementation)
 
-You can use the logger **without** the shared library by importing the Go package directly. This is ideal for Go microservices in the same monorepo.
+**Repository:** [Polyglot](https://github.com/kishankumarhs/Polyglot) (polyglot-go)  
+**Status:** Core implementation — all language bindings build from this
 
-> Note: the package currently lives under `internal/logger`. Consumers outside this module need either a public export path (future) or to live in a module that can access it. Within this repo / `replace` directives, import:
+## Overview
+
+Go is the core implementation language for Polyglot Logger. This guide covers two use cases:
+
+1. **Direct import** — Use the Go package directly (ideal for monorepo services)
+2. **Via FFI** — Use the shared library from non-Go services
+
+This is part of a [modular monorepo](../architecture.md) where:
+
+- **Core Go package:** The actual logger implementation
+- **Shared library:** Native `.so`/`.dll`/`.dylib` compiled from Go via CGO
+- **Bindings:** Node.js, Python, .NET call the shared library via FFI
+
+See [REPOSITORIES.md](../REPOSITORIES.md) for how all repositories work together.
+
+## Use Case 1: Direct Import (Go Microservices)
+
+For Go services in the same repository or using `go.mod replace` directives:
 
 ```go
 import core "polyglot/internal/logger"
 ```
 
-## Quick start
+### Quick Start
 
 ```go
 package main

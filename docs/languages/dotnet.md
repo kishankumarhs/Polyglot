@@ -1,16 +1,43 @@
-# .NET guide
+# .NET Guide
 
-Package: `Polyglot.Logger` (`bindings/dotnet/Polyglot.Logger`).
+**Package:** `Polyglot.Logger` ([NuGet](https://www.nuget.org/packages/Polyglot.Logger/))  
+**Repository:** [polyglot-csharp](https://github.com/kishankumarhs/polyglot-csharp) (Git submodule)  
+**Status:** Independent package with bundled native binaries
 
-## Install / reference
+## Overview
+
+This binding provides idiomatic .NET access to the Polyglot native logger. It's part of a [modular monorepo](../architecture.md) where:
+
+- **Core:** Go logger in [polyglot-go](https://github.com/kishankumarhs/Polyglot)
+- **This binding:** Independent .NET repository with its own releases
+- **Generated code:** P/Invoke bindings auto-generated from C ABI contract
+- **Native binaries:** Pre-compiled for Windows/macOS/Linux, bundled in NuGet package
+
+See [REPOSITORIES.md](../REPOSITORIES.md) for how all four repositories work together.
+
+## Installation
+
+### From NuGet (Recommended)
 
 ```bash
+dotnet add package Polyglot.Logger
+```
+
+Pre-compiled native binaries are included. No build needed.
+
+### From Source (Core Development)
+
+If working on the core Polyglot repository:
+
+```bash
+git clone --recurse-submodules https://github.com/kishankumarhs/Polyglot.git
+cd Polyglot
+
+make build-native
 dotnet add reference bindings/dotnet/Polyglot.Logger/Polyglot.Logger.csproj
 ```
 
-Build the native library first (`make build-native`) and set `POLYGLOT_LOGGER_LIB` when the DLL/`so` is not beside the managed assembly.
-
-## Quick start
+## Quick Start
 
 ```csharp
 using Polyglot.Logger;
@@ -41,6 +68,57 @@ foreach (var kv in log.Stats())
 ```
 
 `Logger` implements `IDisposable`: prefer `using` so `close` always runs.
+
+## Configuration
+
+### Via polyglot.yaml
+
+Create `polyglot.yaml` in project root (auto-discovered):
+
+```yaml
+service: billing-api
+environment: prod
+logging:
+  level: info
+  async: true
+file:
+  enabled: true
+  path: app.log
+  max_size_mb: 100
+http:
+  enabled: false
+  endpoint: https://logs.company.com/ingest
+```
+
+### Programmatic Configuration
+
+```csharp
+var options = new LoggerOptions
+{
+    Service = "billing-api",
+    Environment = "prod",
+    Level = "info",
+    Async = true,
+    File = new FileOptions
+    {
+        Path = "app.log",
+        MaxSizeMb = 100
+    }
+};
+
+using var log = new Logger(options);
+```
+
+### Environment Variables
+
+```csharp
+Environment.SetEnvironmentVariable("POLYGLOT_CONFIG_PATH", "/etc/myapp/polyglot.yaml");
+Environment.SetEnvironmentVariable("POLYGLOT_CONFIG_FILE", "/etc/myapp/config.json");
+```
+
+## API Reference
+
+### Logger Class
 
 ## Options
 

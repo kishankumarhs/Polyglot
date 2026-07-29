@@ -1,17 +1,43 @@
-# Python guide
+# Python Guide
 
-Package: `polyglot-logger` (`bindings/python`).
+**Package:** `polyglot-logger` ([PyPI](https://pypi.org/project/polyglot-logger/))  
+**Repository:** [polyglot-py](https://github.com/kishankumarhs/polyglot-py) (Git submodule)  
+**Status:** Independent package with bundled native binaries
 
-## Install
+## Overview
+
+This binding provides idiomatic Python access to the Polyglot native logger. It's part of a [modular monorepo](../architecture.md) where:
+
+- **Core:** Go logger in [polyglot-go](https://github.com/kishankumarhs/Polyglot)
+- **This binding:** Independent Python repository with its own releases
+- **Generated code:** FFI bindings auto-generated from C ABI contract
+- **Native binaries:** Pre-compiled for Windows/macOS/Linux, bundled in wheel
+
+See [REPOSITORIES.md](../REPOSITORIES.md) for how all four repositories work together.
+
+## Installation
+
+### From PyPI (Recommended)
 
 ```bash
-# from repo root, after make build-native
+pip install polyglot-logger
+```
+
+Pre-compiled native binaries are included. No build needed.
+
+### From Source (Core Development)
+
+If working on the core Polyglot repository:
+
+```bash
+git clone --recurse-submodules https://github.com/kishankumarhs/Polyglot.git
+cd Polyglot
+
+make build-native
 pip install -e bindings/python
 ```
 
-Ensure the native library is discoverable (`dist/` relative to the repo, package `native/`, or `POLYGLOT_LOGGER_LIB`).
-
-## Quick start
+## Quick Start
 
 ```python
 from polyglot_logger import Logger, Level, library_version, abi_version
@@ -38,7 +64,50 @@ with Logger(
 
 `Logger` is a context manager: `__exit__` calls `close()`.
 
-## Constructor options
+## Configuration
+
+### Via polyglot.yaml
+
+Create `polyglot.yaml` in project root (auto-discovered):
+
+```yaml
+service: payments-api
+environment: prod
+logging:
+  level: info
+  async: true
+file:
+  enabled: true
+  path: /var/log/payments.log
+http:
+  enabled: false
+  endpoint: https://logs.company.com/ingest
+```
+
+### Programmatic Configuration
+
+```python
+log = Logger(
+    service="payments-api",
+    environment="prod",
+    level="info",
+    async_mode=True,
+    file_path="/var/log/payments.log",
+)
+```
+
+### Environment Variables
+
+```bash
+export POLYGLOT_CONFIG_PATH=/etc/myapp/polyglot.yaml
+export POLYGLOT_CONFIG_FILE=/etc/myapp/config.json
+```
+
+## API Reference
+
+### Logger Constructor
+
+## Constructor Options
 
 | Parameter | Maps to config |
 | --------- | -------------- |
