@@ -10,6 +10,9 @@ on:
         description: "Version to release (e.g., 0.2.0)"
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   # Build native libraries for all platforms
   build-native:
@@ -31,7 +34,7 @@ jobs:
             arch: x86_64
             lib: liblogger.dylib
           - os: macos-arm
-            runs-on: macos-13
+            runs-on: macos-14
             target: darwin
             arch: arm64
             lib: liblogger.dylib
@@ -51,6 +54,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+          cache: true
 
       - name: Setup GCC (Linux)
         if: matrix.os == 'linux'
@@ -65,7 +69,18 @@ jobs:
           msystem: mingw64
           install: mingw-w64-x86_64-gcc mingw-w64-x86_64-make
 
-      - name: Build native library
+      - name: Build native library (Windows)
+        if: matrix.os == 'windows'
+        shell: msys2 {0}
+        run: ./scripts/build-native.sh dist/${{ matrix.os }}/${{ matrix.arch }}
+        env:
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.target }}
+          GOARCH: ${{ matrix.arch }}
+          CC: x86_64-w64-mingw32-gcc
+
+      - name: Build native library (Unix)
+        if: matrix.os != 'windows'
         run: bash ./scripts/build-native.sh dist/${{ matrix.os }}/${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
@@ -77,12 +92,14 @@ jobs:
         with:
           name: native-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/${{ matrix.os }}/${{ matrix.arch }}/${{ matrix.lib }}
+          if-no-files-found: error
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4
         with:
           name: checksums-${{ matrix.os }}-${{ matrix.arch }}
           path: dist/${{ matrix.os }}/${{ matrix.arch }}/checksums.sha256
+          if-no-files-found: error
 
   # Package for npm
   package-npm:
@@ -96,10 +113,12 @@ jobs:
           submodules: recursive
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: "18"
           registry-url: https://registry.npmjs.org/
+          cache: npm
+          cache-dependency-path: bindings/node/package-lock.json
 
       - name: Download all native artifacts
         uses: actions/download-artifact@v4
@@ -110,7 +129,7 @@ jobs:
         run: |
           mkdir -p bindings/node/bin
           # Copy all .so and .dll files
-          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/node/bin/
+          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/node/bin/ \;
           ls -la bindings/node/bin/
 
       - name: Install dependencies
@@ -146,6 +165,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
 
       - name: Download all native artifacts
         uses: actions/download-artifact@v4
@@ -156,7 +176,7 @@ jobs:
         run: |
           mkdir -p bindings/python/polyglot_logger/bin
           # Copy all .so and .dll files
-          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/python/polyglot_logger/bin/
+          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/python/polyglot_logger/bin/ \;
           ls -la bindings/python/polyglot_logger/bin/
 
       - name: Install build tools
@@ -198,7 +218,7 @@ jobs:
         run: |
           mkdir -p bindings/dotnet/Polyglot.Logger/native
           # Copy all .so and .dll files
-          find artifacts -name "*.so" -o -name "*.dll" -o -name "*.dylib" | xargs -I {} cp {} bindings/dotnet/Polyglot.Logger/native/
+          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/dotnet/Polyglot.Logger/native/ \;
           ls -la bindings/dotnet/Polyglot.Logger/native/
 
       - name: Build NuGet package
@@ -216,7 +236,9 @@ jobs:
     name: Create GitHub Release
     needs: [package-npm, package-python, package-dotnet]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: |
+      startsWith(github.ref, 'refs/tags/')
+      || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -235,6 +257,7 @@ jobs:
             release-artifacts/npm-package/*.tgz
             release-artifacts/python-packages/*
             release-artifacts/dotnet-packages/*.nupkg
+            release-artifacts/checksums-*/*
           draft: false
           prerelease: false
         env:
@@ -245,7 +268,9 @@ jobs:
     name: Publish to npm
     needs: [package-npm, create-release]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: |
+      startsWith(github.ref, 'refs/tags/')
+      || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download npm package
         uses: actions/download-artifact@v4
@@ -259,7 +284,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Publish to npm
-        run: npm publish *.tgz
+        run: npm publish *.tgz --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -268,7 +293,9 @@ jobs:
     name: Publish to PyPI
     needs: [package-python, create-release]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: |
+      startsWith(github.ref, 'refs/tags/')
+      || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download Python packages
         uses: actions/download-artifact@v4
@@ -285,7 +312,7 @@ jobs:
         run: pip install twine
 
       - name: Publish to PyPI
-        run: twine upload dist/* --non-interactive
+        run: twine upload --skip-existing dist/* --non-interactive
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
@@ -295,7 +322,9 @@ jobs:
     name: Publish to NuGet
     needs: [package-dotnet, create-release]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: |
+      startsWith(github.ref, 'refs/tags/')
+      || github.event_name == 'workflow_dispatch'
     steps:
       - name: Download .NET packages
         uses: actions/download-artifact@v4
@@ -311,5 +340,5 @@ jobs:
       - name: Publish to NuGet
         run: |
           for file in dist/*.nupkg; do
-            dotnet nuget push "$file" -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json
+            dotnet nuget push "$file" -k ${{ secrets.NUGET_TOKEN }} -s https://api.nuget.org/v3/index.json --skip-duplicate
           done
