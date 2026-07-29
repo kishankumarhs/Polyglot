@@ -1,6 +1,6 @@
 """Minimal Python example."""
 
-from eximietas_logger import Logger, Level
+from polyglot_logger import Logger, Level
 
 with Logger(
     "python-example",

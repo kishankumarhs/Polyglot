@@ -46,7 +46,7 @@ Also: `logger.h`, `checksums.sha256`.
 
 Bindings search, in order:
 
-1. `EXIMIETAS_LOGGER_LIB` (absolute path — recommended in CI and deploys)
+1. `POLYGLOT_LOGGER_LIB` (absolute path — recommended in CI and deploys)
 2. Package-local `native/<lib>`
 3. Repo `dist/` / `build/` (when running from the monorepo)
 4. Current working directory
@@ -74,6 +74,6 @@ If `gopls` reports “No packages found” for `native/export.go`, ensure the wo
 | ABI | `logger_abi_version()` → `1` |
 | Python | `bindings/python/pyproject.toml` |
 | Node | `bindings/node/package.json` |
-| .NET | `Eximietas.Logger.csproj` |
+| .NET | `Polyglot.Logger.csproj` |
 
 Bump binding package versions together with the core when shipping a release consumers will install.

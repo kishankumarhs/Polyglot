@@ -1,4 +1,4 @@
-# Eximietas Native Logger
+# Polyglot Logger
 
 Cross-language structured logger: a **Go core** compiled to a native shared library (`.so` / `.dll` / `.dylib`), plus idiomatic bindings for **Python**, **Node.js/TypeScript**, and **.NET**.
 
@@ -35,7 +35,7 @@ pip install -e bindings/python
 python examples/python/main.py
 ```
 
-Set `EXIMIETAS_LOGGER_LIB` to the absolute path of the shared library if auto-discovery fails.
+Set `POLYGLOT_LOGGER_LIB` to the absolute path of the shared library if auto-discovery fails.
 
 ### Minimal config (stdout)
 

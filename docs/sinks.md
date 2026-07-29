@@ -143,7 +143,7 @@ Same idea: use Grafana Cloud’s Loki ingest URL and credentials **through an ad
 
 ## OpenTelemetry note
 
-The README example port `:4318` is commonly associated with OTLP HTTP. This sink is **not** an OTLP protobuf/JSON exporter — it is plain NDJSON of Eximietas log entries. Point it at a service that understands that format, or transform before OTLP.
+The README example port `:4318` is commonly associated with OTLP HTTP. This sink is **not** an OTLP protobuf/JSON exporter — it is plain NDJSON of Polyglot log entries. Point it at a service that understands that format, or transform before OTLP.
 
 ## Choosing a strategy
 

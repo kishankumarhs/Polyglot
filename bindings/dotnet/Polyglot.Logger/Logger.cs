@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
-namespace Eximietas.Logger;
+namespace Polyglot.Logger;
 
 public sealed class LoggerException : Exception
 {
@@ -65,7 +65,7 @@ internal static partial class NativeMethods
                 ? "liblogger.dylib"
                 : "liblogger.so";
 
-        var env = Environment.GetEnvironmentVariable("EXIMIETAS_LOGGER_LIB");
+        var env = Environment.GetEnvironmentVariable("POLYGLOT_LOGGER_LIB");
         if (!string.IsNullOrWhiteSpace(env))
         {
             yield return env;

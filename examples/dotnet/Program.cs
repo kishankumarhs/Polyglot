@@ -1,4 +1,4 @@
-using Eximietas.Logger;
+using Polyglot.Logger;
 
 Console.WriteLine($"version={Logger.LibraryVersion()} abi={Logger.AbiVersion()}");
 

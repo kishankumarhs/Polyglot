@@ -23,7 +23,7 @@ jobs:
       - name: Codegen drift check
         run: |
           go run ./cmd/codegen
-          git diff --exit-code -- native/include/logger.h bindings/python/eximietas_logger/_ffi_generated.py bindings/node/src/ffi.generated.ts bindings/dotnet/Eximietas.Logger/NativeMethods.Generated.cs || (echo "codegen drift: run go run ./cmd/codegen and commit" && exit 1)
+          git diff --exit-code -- native/include/logger.h bindings/python/polyglot_logger/_ffi_generated.py bindings/node/src/ffi.generated.ts bindings/dotnet/Polyglot.Logger/NativeMethods.Generated.cs || (echo "codegen drift: run go run ./cmd/codegen and commit" && exit 1)
 
   native:
     strategy:
@@ -102,7 +102,7 @@ jobs:
         run: |
           npm install
           npm run build
-          export EXIMIETAS_LOGGER_LIB=$GITHUB_WORKSPACE/dist/liblogger.so
+          export POLYGLOT_LOGGER_LIB=$GITHUB_WORKSPACE/dist/liblogger.so
           npm test
 
   dotnet-smoke:
@@ -122,5 +122,5 @@ jobs:
           bash scripts/build-native.sh dist
       - name: Test
         env:
-          EXIMIETAS_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
-        run: dotnet test bindings/dotnet/Eximietas.Logger.Tests/Eximietas.Logger.Tests.csproj -c Release
+          POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+        run: dotnet test bindings/dotnet/Polyglot.Logger.Tests/Polyglot.Logger.Tests.csproj -c Release

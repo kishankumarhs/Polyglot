@@ -251,9 +251,72 @@ func TestLoggerConcurrentWrites(t *testing.T) {
 	}
 }
 
+// gateSink parks the worker inside Write until the test releases it. Overflow
+// behavior can then be asserted exactly, instead of hoping the producer outruns
+// the worker (which it does not on a fast machine).
+type gateSink struct {
+	mu      sync.Mutex
+	lines   []string
+	entered chan struct{}
+	once    sync.Once
+	release chan struct{}
+}
+
+func newGateSink() *gateSink {
+	return &gateSink{entered: make(chan struct{}), release: make(chan struct{})}
+}
+
+func (g *gateSink) Write(line []byte) (int, error) {
+	g.mu.Lock()
+	g.lines = append(g.lines, string(line))
+	g.mu.Unlock()
+	g.once.Do(func() { close(g.entered) })
+	<-g.release
+	return len(line), nil
+}
+
+func (g *gateSink) Flush() error  { return nil }
+func (g *gateSink) Close() error  { return nil }
+func (g *gateSink) Name() string  { return "gate" }
+func (g *gateSink) Buffered() int { return 0 }
+
+func (g *gateSink) written() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return strings.Join(g.lines, "")
+}
+
+func (g *gateSink) open() {
+	close(g.release)
+}
+
+// stallWorker swaps in a gate sink and blocks the worker inside it, leaving the
+// queue empty and guaranteed not to drain until the gate opens.
+func stallWorker(t *testing.T, l *Logger) *gateSink {
+	t.Helper()
+	g := newGateSink()
+
+	l.mu.Lock()
+	old := l.sinks
+	l.sinks = []Sink{g}
+	l.mu.Unlock()
+	_ = closeSinks(old)
+
+	if err := l.Info("stall", nil); err != nil {
+		t.Fatalf("stall write: %v", err)
+	}
+	select {
+	case <-g.entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("worker never reached the gate sink")
+	}
+	return g
+}
+
 func TestOverflowDropNewest(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "drop_newest.log")
-	cfg := fileOnlyConfig(t, path)
+	const total = 200
+
+	cfg := fileOnlyConfig(t, filepath.Join(t.TempDir(), "drop_newest.log"))
 	cfg.Async = true
 	cfg.QueueSize = 8
 	cfg.Overflow = OverflowDropNewest
@@ -264,20 +327,38 @@ func TestOverflowDropNewest(t *testing.T) {
 	}
 	defer log.Close()
 
-	// Stall the worker by flooding faster than it can write; then check drops.
-	for i := 0; i < 200; i++ {
-		_ = log.Info(strings.Repeat("x", 64), map[string]any{"i": i})
+	gate := stallWorker(t, log)
+
+	for i := 0; i < total; i++ {
+		_ = log.Info("flood", map[string]any{"i": i})
 	}
-	_ = log.Flush()
+
+	// The queue holds QueueSize entries and nothing drains, so every remaining
+	// entry must be rejected.
 	st := log.Stats()
-	if st.Dropped == 0 {
-		t.Fatalf("expected some drops with tiny queue, got stats=%+v", st)
+	if want := uint64(total - cfg.QueueSize); st.Dropped != want {
+		t.Fatalf("expected dropped=%d, got %+v", want, st)
+	}
+
+	gate.open()
+	if err := log.Flush(); err != nil {
+		t.Fatalf("Flush: %v", err)
+	}
+
+	// drop_newest keeps the oldest queued entries and rejects later ones.
+	got := gate.written()
+	if !strings.Contains(got, `"i":0`) {
+		t.Fatal("drop_newest discarded the oldest queued entry")
+	}
+	if strings.Contains(got, `"i":199`) {
+		t.Fatal("drop_newest kept an entry that arrived after the queue was full")
 	}
 }
 
 func TestOverflowDropOldest(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "drop_oldest.log")
-	cfg := fileOnlyConfig(t, path)
+	const total = 100
+
+	cfg := fileOnlyConfig(t, filepath.Join(t.TempDir(), "drop_oldest.log"))
 	cfg.Async = true
 	cfg.QueueSize = 4
 	cfg.Overflow = OverflowDropOldest
@@ -288,13 +369,29 @@ func TestOverflowDropOldest(t *testing.T) {
 	}
 	defer log.Close()
 
-	for i := 0; i < 100; i++ {
-		_ = log.Info("drop-oldest", map[string]any{"i": i})
+	gate := stallWorker(t, log)
+
+	for i := 0; i < total; i++ {
+		_ = log.Info("flood", map[string]any{"i": i})
 	}
-	_ = log.Flush()
+
 	st := log.Stats()
-	if st.Dropped == 0 {
-		t.Fatalf("expected drops for drop_oldest, got %+v", st)
+	if want := uint64(total - cfg.QueueSize); st.Dropped != want {
+		t.Fatalf("expected dropped=%d, got %+v", want, st)
+	}
+
+	gate.open()
+	if err := log.Flush(); err != nil {
+		t.Fatalf("Flush: %v", err)
+	}
+
+	// drop_oldest evicts early entries and keeps the most recent ones.
+	got := gate.written()
+	if !strings.Contains(got, fmt.Sprintf(`"i":%d`, total-1)) {
+		t.Fatal("drop_oldest discarded the newest entry")
+	}
+	if strings.Contains(got, `"i":0`) {
+		t.Fatal("drop_oldest kept the oldest entry instead of evicting it")
 	}
 }
 

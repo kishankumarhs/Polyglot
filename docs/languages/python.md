@@ -1,6 +1,6 @@
 # Python guide
 
-Package: `eximietas-logger` (`bindings/python`).
+Package: `polyglot-logger` (`bindings/python`).
 
 ## Install
 
@@ -9,12 +9,12 @@ Package: `eximietas-logger` (`bindings/python`).
 pip install -e bindings/python
 ```
 
-Ensure the native library is discoverable (`dist/` relative to the repo, package `native/`, or `EXIMIETAS_LOGGER_LIB`).
+Ensure the native library is discoverable (`dist/` relative to the repo, package `native/`, or `POLYGLOT_LOGGER_LIB`).
 
 ## Quick start
 
 ```python
-from eximietas_logger import Logger, Level, library_version, abi_version
+from polyglot_logger import Logger, Level, library_version, abi_version
 
 print(library_version(), abi_version())
 
@@ -95,7 +95,7 @@ Safe to call log/flush/stats/set_fields/reload from multiple threads. Close once
 ## Tests & example
 
 ```bash
-EXIMIETAS_LOGGER_LIB=$PWD/dist/liblogger.so pytest bindings/python/tests -q
+POLYGLOT_LOGGER_LIB=$PWD/dist/liblogger.so pytest bindings/python/tests -q
 python examples/python/main.py
 ```
 

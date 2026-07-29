@@ -18,11 +18,11 @@ const lib = distCandidates.find((p) => fs.existsSync(p));
 if (!lib) {
   test("native library missing", { skip: "native logger library not built" }, () => {});
 } else {
-  process.env.EXIMIETAS_LOGGER_LIB = lib;
+  process.env.POLYGLOT_LOGGER_LIB = lib;
   const { Logger, Level, abiVersion, libraryVersion } = require("../dist/index.js");
 
   test("writes structured json and filters levels", () => {
-    const filePath = path.join(os.tmpdir(), `eximietas-logger-${Date.now()}.log`);
+    const filePath = path.join(os.tmpdir(), `polyglot-logger-${Date.now()}.log`);
     try {
       const log = new Logger({
         service: "node-smoke",

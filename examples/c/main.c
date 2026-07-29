@@ -1,5 +1,5 @@
 /*
- * Minimal C consumer example for the Eximietas logger shared library.
+ * Minimal C consumer example for the Polyglot logger shared library.
  *
  * Build (Linux):
  *   gcc examples/c/main.c -I native/include -L dist -llogger -o examples/c/demo

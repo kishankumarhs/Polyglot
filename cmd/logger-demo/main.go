@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"logger/internal/logger"
+	"polyglot/internal/logger"
 )
 
 func main() {

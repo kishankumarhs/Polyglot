@@ -9,7 +9,7 @@
 1. Build: `make build-native`
 2. Set absolute path:
    ```bash
-   export EXIMIETAS_LOGGER_LIB=/abs/path/to/logger.dll   # or liblogger.so / .dylib
+   export POLYGLOT_LOGGER_LIB=/abs/path/to/logger.dll   # or liblogger.so / .dylib
    ```
 3. Confirm the file exists and matches the OS/arch of the process (don’t load a Linux `.so` into Windows Python).
 
@@ -82,4 +82,4 @@ Using a closed handle returns an error (`invalid logger handle`). After many cre
 
 ## Import works but first `Logger()` crashes
 
-Bindings load the native library lazily. Import succeeds without the `.so`/`.dll`; the first create/version call fails if it is missing. Build or set `EXIMIETAS_LOGGER_LIB` before creating a logger.
+Bindings load the native library lazily. Import succeeds without the `.so`/`.dll`; the first create/version call fails if it is missing. Build or set `POLYGLOT_LOGGER_LIB` before creating a logger.

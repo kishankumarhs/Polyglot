@@ -9,7 +9,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
-	"time"
 )
 
 func httpOnlyConfig(t *testing.T, url string) Config {
@@ -159,8 +158,9 @@ func TestAsyncCloseSurfacesError(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
+	// Whether the worker drains this before or during shutdown, the collector
+	// rejects it, so the final flush must fail either way.
 	_ = log.Info("pending", nil)
-	time.Sleep(50 * time.Millisecond) // let the worker pick up the item
 
 	if err := log.Close(); err == nil {
 		t.Fatal("expected Close to report that logs were never accepted")

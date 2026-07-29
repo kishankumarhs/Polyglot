@@ -1,7 +1,7 @@
 {
   "abi_version": 1,
   "library": "logger",
-  "header_guard": "EXIMIETAS_LOGGER_H",
+  "header_guard": "POLYGLOT_LOGGER_H",
   "enums": [
     {
       "name": "LoggerLevel",

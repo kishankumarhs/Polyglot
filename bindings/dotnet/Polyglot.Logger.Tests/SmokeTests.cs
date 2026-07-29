@@ -1,14 +1,14 @@
 using System.Text.Json;
 using Xunit;
 
-namespace Eximietas.Logger.Tests;
+namespace Polyglot.Logger.Tests;
 
 public class SmokeTests
 {
     [Fact]
     public void WritesStructuredJsonAndFiltersLevels()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"eximietas-logger-{Guid.NewGuid():N}.log");
+        var path = Path.Combine(Path.GetTempPath(), $"polyglot-logger-{Guid.NewGuid():N}.log");
         try
         {
             using (var log = new Logger(new LoggerOptions

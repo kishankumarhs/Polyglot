@@ -1,11 +1,11 @@
-# Eximietas Logger (.NET)
+# Polyglot Logger (.NET)
 
-Idiomatic .NET bindings (`Eximietas.Logger`) for the Eximietas native structured logger.
+Idiomatic .NET bindings (`Polyglot.Logger`) for the Polyglot native structured logger.
 
 **Full guide:** [docs/languages/dotnet.md](../../docs/languages/dotnet.md) · [User guide](../../docs/user-guide.md) · [Getting started](../../docs/getting-started.md)
 
 ```csharp
-using Eximietas.Logger;
+using Polyglot.Logger;
 
 using var log = new Logger(new LoggerOptions
 {
@@ -22,9 +22,9 @@ log.LogSimple(Level.Error, "billing failed");
 
 ```bash
 make build-native
-dotnet build bindings/dotnet/Eximietas.Logger/Eximietas.Logger.csproj
+dotnet build bindings/dotnet/Polyglot.Logger/Polyglot.Logger.csproj
 ```
 
 **Thread safety:** concurrent `Info` / `Flush` / `Stats` / `SetFields` / `ReloadConfig` on one instance is safe; dispose once from a single owner.
 
-Set `EXIMIETAS_LOGGER_LIB` to the absolute path of `logger.dll`, `liblogger.so`, or `liblogger.dylib` if needed.
+Set `POLYGLOT_LOGGER_LIB` to the absolute path of `logger.dll`, `liblogger.so`, or `liblogger.dylib` if needed.

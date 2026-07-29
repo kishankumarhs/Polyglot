@@ -17,6 +17,6 @@ demo:
 
 clean:
 	rm -rf dist build
-	rm -rf bindings/python/eximietas_logger/native
+	rm -rf bindings/python/polyglot_logger/native
 	rm -rf bindings/node/native bindings/node/dist
-	rm -rf bindings/dotnet/Eximietas.Logger/native
+	rm -rf bindings/dotnet/Polyglot.Logger/native

@@ -8,7 +8,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from eximietas_logger import Logger, LoggerError, Level, abi_version, library_version
+from polyglot_logger import Logger, LoggerError, Level, abi_version, library_version
 
 
 def _has_native_lib() -> bool:
@@ -16,9 +16,9 @@ def _has_native_lib() -> bool:
         ROOT / "dist" / "logger.dll",
         ROOT / "dist" / "liblogger.so",
         ROOT / "dist" / "liblogger.dylib",
-        Path(__file__).resolve().parents[1] / "eximietas_logger" / "native" / "logger.dll",
-        Path(__file__).resolve().parents[1] / "eximietas_logger" / "native" / "liblogger.so",
-        Path(__file__).resolve().parents[1] / "eximietas_logger" / "native" / "liblogger.dylib",
+        Path(__file__).resolve().parents[1] / "polyglot_logger" / "native" / "logger.dll",
+        Path(__file__).resolve().parents[1] / "polyglot_logger" / "native" / "liblogger.so",
+        Path(__file__).resolve().parents[1] / "polyglot_logger" / "native" / "liblogger.dylib",
     ]
     return any(p.exists() for p in candidates)
 

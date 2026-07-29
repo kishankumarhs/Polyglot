@@ -33,9 +33,9 @@ Get-FileHash -Algorithm SHA256 @((Join-Path $OutDir $LibName), (Join-Path $OutDi
   Set-Content -Path (Join-Path $OutDir "checksums.sha256")
 
 $targets = @(
-  (Join-Path $Root "bindings\python\eximietas_logger\native"),
+  (Join-Path $Root "bindings\python\polyglot_logger\native"),
   (Join-Path $Root "bindings\node\native"),
-  (Join-Path $Root "bindings\dotnet\Eximietas.Logger\native")
+  (Join-Path $Root "bindings\dotnet\Polyglot.Logger\native")
 )
 foreach ($t in $targets) {
   New-Item -ItemType Directory -Force -Path $t | Out-Null

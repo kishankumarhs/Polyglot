@@ -68,7 +68,7 @@ function libraryName(): string {
 
 function candidatePaths(): string[] {
   const name = libraryName();
-  const env = process.env.EXIMIETAS_LOGGER_LIB;
+  const env = process.env.POLYGLOT_LOGGER_LIB;
   const roots = [
     env,
     path.join(__dirname, "..", "native", name),

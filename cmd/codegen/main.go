@@ -83,9 +83,9 @@ func main() {
 		fn   func(Spec) ([]byte, error)
 	}{
 		{filepath.Join(root, "native", "include", "logger.h"), genHeader},
-		{filepath.Join(root, "bindings", "python", "eximietas_logger", "_ffi_generated.py"), genPythonFFI},
+		{filepath.Join(root, "bindings", "python", "polyglot_logger", "_ffi_generated.py"), genPythonFFI},
 		{filepath.Join(root, "bindings", "node", "src", "ffi.generated.ts"), genNodeFFI},
-		{filepath.Join(root, "bindings", "dotnet", "Eximietas.Logger", "NativeMethods.Generated.cs"), genDotnetFFI},
+		{filepath.Join(root, "bindings", "dotnet", "Polyglot.Logger", "NativeMethods.Generated.cs"), genDotnetFFI},
 		{filepath.Join(root, "native", "abi_exports.md"), genExportChecklist},
 	}
 
@@ -558,7 +558,7 @@ func genDotnetFFI(spec Spec) ([]byte, error) {
 	b.WriteString("// Source of truth: api/abi.json\n\n")
 	b.WriteString("#nullable enable\n")
 	b.WriteString("using System.Runtime.InteropServices;\n\n")
-	b.WriteString("namespace Eximietas.Logger;\n\n")
+	b.WriteString("namespace Polyglot.Logger;\n\n")
 
 	for _, e := range spec.Enums {
 		name := strings.TrimPrefix(e.Name, "Logger")

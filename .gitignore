@@ -27,7 +27,7 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .venv/
-bindings/python/eximietas_logger/native/
+bindings/python/polyglot_logger/native/
 
 # .NET
 bin/

@@ -1,4 +1,4 @@
-"""Eximietas native logger Python bindings."""
+"""Polyglot native logger Python bindings."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def _library_name() -> str:
 def _candidate_paths() -> list[Path]:
     here = Path(__file__).resolve().parent
     name = _library_name()
-    env = os.environ.get("EXIMIETAS_LOGGER_LIB")
+    env = os.environ.get("POLYGLOT_LOGGER_LIB")
     paths: list[Path] = []
     if env:
         paths.append(Path(env))
@@ -146,7 +146,7 @@ def _build_config(
 
 
 class Logger:
-    """Idiomatic Python wrapper around the native Eximietas logger.
+    """Idiomatic Python wrapper around the native Polyglot logger.
 
     Thread-safety: log/flush/stats/set_fields/reload are safe for concurrent use
     on the same instance. close() should be called once from a single owner.

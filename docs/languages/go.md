@@ -5,7 +5,7 @@ You can use the logger **without** the shared library by importing the Go packag
 > Note: the package currently lives under `internal/logger`. Consumers outside this module need either a public export path (future) or to live in a module that can access it. Within this repo / `replace` directives, import:
 
 ```go
-import core "logger/internal/logger"
+import core "polyglot/internal/logger"
 ```
 
 ## Quick start
@@ -16,7 +16,7 @@ package main
 import (
 	"log"
 
-	core "logger/internal/logger"
+	core "polyglot/internal/logger"
 )
 
 func main() {

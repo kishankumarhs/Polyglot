@@ -5,7 +5,7 @@
 #nullable enable
 using System.Runtime.InteropServices;
 
-namespace Eximietas.Logger;
+namespace Polyglot.Logger;
 
 public enum Level
 {

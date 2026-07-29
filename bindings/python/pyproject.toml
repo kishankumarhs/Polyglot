@@ -3,17 +3,17 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "eximietas-logger"
+name = "polyglot-logger"
 version = "0.2.0"
-description = "Python bindings for the Eximietas native structured logger"
+description = "Python bindings for the Polyglot native structured logger"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-authors = [{ name = "Eximietas" }]
+authors = [{ name = "Polyglot" }]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["eximietas_logger*"]
+include = ["polyglot_logger*"]
 
 [tool.setuptools.package-data]
-eximietas_logger = ["native/*"]
+polyglot_logger = ["native/*"]

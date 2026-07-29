@@ -1,7 +1,7 @@
 {
-  "name": "@eximietas/logger",
+  "name": "@polyglot/logger",
   "version": "0.2.0",
-  "description": "Node.js / TypeScript bindings for the Eximietas native structured logger",
+  "description": "Node.js / TypeScript bindings for the Polyglot native structured logger",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

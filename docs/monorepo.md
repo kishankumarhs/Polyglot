@@ -41,7 +41,7 @@ your-monorepo/
 ```json
 {
   "dependencies": {
-    "@eximietas/logger": "*"
+    "@polyglot/logger": "*"
   }
 }
 ```
@@ -49,7 +49,7 @@ your-monorepo/
 3. Build native once (CI or local), then point services at it:
 
 ```bash
-export EXIMIETAS_LOGGER_LIB=/abs/path/to/packages/logger/dist/liblogger.so
+export POLYGLOT_LOGGER_LIB=/abs/path/to/packages/logger/dist/liblogger.so
 ```
 
 4. Optional Turbo pipeline:
@@ -79,19 +79,19 @@ Install editable from the monorepo path:
 pip install -e packages/logger/bindings/python
 ```
 
-Or publish an internal wheel that vendors `native/liblogger.so` (and siblings) under `eximietas_logger/native/`.
+Or publish an internal wheel that vendors `native/liblogger.so` (and siblings) under `polyglot_logger/native/`.
 
-Set `EXIMIETAS_LOGGER_LIB` in service env if the packaged `native/` copy is not present.
+Set `POLYGLOT_LOGGER_LIB` in service env if the packaged `native/` copy is not present.
 
 ## .NET
 
 Reference the project:
 
 ```xml
-<ProjectReference Include="..\..\packages\logger\bindings\dotnet\Eximietas.Logger\Eximietas.Logger.csproj" />
+<ProjectReference Include="..\..\packages\logger\bindings\dotnet\Polyglot.Logger\Polyglot.Logger.csproj" />
 ```
 
-Or pack an internal NuGet that includes the platform-native library next to the managed DLL. At runtime, `EXIMIETAS_LOGGER_LIB` or the resolver’s `native/` candidate paths must find the shared library.
+Or pack an internal NuGet that includes the platform-native library next to the managed DLL. At runtime, `POLYGLOT_LOGGER_LIB` or the resolver’s `native/` candidate paths must find the shared library.
 
 ## Shared native artifact strategy
 
@@ -101,7 +101,7 @@ Or pack an internal NuGet that includes the platform-native library next to the 
 | Commit prebuilt libs under `dist/` | Simple local bootstrap | Large binaries in git |
 | Build on each developer machine | Always matches local OS | Requires Go + C toolchain |
 
-Prefer CI artifacts + `EXIMIETAS_LOGGER_LIB` in deployed services.
+Prefer CI artifacts + `POLYGLOT_LOGGER_LIB` in deployed services.
 
 ## One config contract everywhere
 

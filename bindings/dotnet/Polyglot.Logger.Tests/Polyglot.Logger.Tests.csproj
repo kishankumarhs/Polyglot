@@ -13,6 +13,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Eximietas.Logger\Eximietas.Logger.csproj" />
+    <ProjectReference Include="..\Polyglot.Logger\Polyglot.Logger.csproj" />
   </ItemGroup>
 </Project>

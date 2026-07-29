@@ -10,7 +10,7 @@ import (
 	"sync"
 	"unsafe"
 
-	core "logger/internal/logger"
+	core "polyglot/internal/logger"
 )
 
 type nativeInstance struct {

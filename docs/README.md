@@ -1,4 +1,4 @@
-# Eximietas Logger documentation
+# Polyglot Logger documentation
 
 Cross-language structured logging: one Go core, a stable C ABI, and thin bindings for **Python**, **Node.js/TypeScript**, and **.NET**.
 

@@ -62,11 +62,11 @@ cp "$HEADER_SRC" "$OUT_DIR/logger.h"
 )
 
 # Stage copies for language bindings convenience.
-mkdir -p "$ROOT/bindings/python/eximietas_logger/native"
+mkdir -p "$ROOT/bindings/python/polyglot_logger/native"
 mkdir -p "$ROOT/bindings/node/native"
-mkdir -p "$ROOT/bindings/dotnet/Eximietas.Logger/native"
-cp "$OUT_DIR/$LIB_NAME" "$ROOT/bindings/python/eximietas_logger/native/"
+mkdir -p "$ROOT/bindings/dotnet/Polyglot.Logger/native"
+cp "$OUT_DIR/$LIB_NAME" "$ROOT/bindings/python/polyglot_logger/native/"
 cp "$OUT_DIR/$LIB_NAME" "$ROOT/bindings/node/native/"
-cp "$OUT_DIR/$LIB_NAME" "$ROOT/bindings/dotnet/Eximietas.Logger/native/"
+cp "$OUT_DIR/$LIB_NAME" "$ROOT/bindings/dotnet/Polyglot.Logger/native/"
 
 echo "Built $LIB_NAME for $OS/$ARCH"

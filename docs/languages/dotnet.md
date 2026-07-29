@@ -1,19 +1,19 @@
 # .NET guide
 
-Package: `Eximietas.Logger` (`bindings/dotnet/Eximietas.Logger`).
+Package: `Polyglot.Logger` (`bindings/dotnet/Polyglot.Logger`).
 
 ## Install / reference
 
 ```bash
-dotnet add reference bindings/dotnet/Eximietas.Logger/Eximietas.Logger.csproj
+dotnet add reference bindings/dotnet/Polyglot.Logger/Polyglot.Logger.csproj
 ```
 
-Build the native library first (`make build-native`) and set `EXIMIETAS_LOGGER_LIB` when the DLL/`so` is not beside the managed assembly.
+Build the native library first (`make build-native`) and set `POLYGLOT_LOGGER_LIB` when the DLL/`so` is not beside the managed assembly.
 
 ## Quick start
 
 ```csharp
-using Eximietas.Logger;
+using Polyglot.Logger;
 
 Console.WriteLine($"version={Logger.LibraryVersion()} abi={Logger.AbiVersion()}");
 
@@ -95,8 +95,8 @@ Safe for concurrent Tasks. Dispose once from a single owner. Close/`Dispose` bef
 ## Tests & example
 
 ```bash
-export EXIMIETAS_LOGGER_LIB=$PWD/dist/liblogger.so
-dotnet test bindings/dotnet/Eximietas.Logger.Tests/Eximietas.Logger.Tests.csproj -c Release
+export POLYGLOT_LOGGER_LIB=$PWD/dist/liblogger.so
+dotnet test bindings/dotnet/Polyglot.Logger.Tests/Polyglot.Logger.Tests.csproj -c Release
 dotnet run --project examples/dotnet
 ```
 

@@ -33,7 +33,7 @@ Also produced: `dist/logger.h`, `dist/checksums.sha256`. Binding packages stage 
 If auto-discovery fails later, set:
 
 ```bash
-export EXIMIETAS_LOGGER_LIB=/absolute/path/to/liblogger.so   # or logger.dll / liblogger.dylib
+export POLYGLOT_LOGGER_LIB=/absolute/path/to/liblogger.so   # or logger.dll / liblogger.dylib
 ```
 
 ## 2. Pick a language and run an example
@@ -50,15 +50,15 @@ python examples/python/main.py
 ```bash
 cd bindings/node && npm install && npm run build && cd ../..
 # Windows
-EXIMIETAS_LOGGER_LIB="$PWD/dist/logger.dll" node examples/node/main.mjs
+POLYGLOT_LOGGER_LIB="$PWD/dist/logger.dll" node examples/node/main.mjs
 # Linux
-EXIMIETAS_LOGGER_LIB="$PWD/dist/liblogger.so" node examples/node/main.mjs
+POLYGLOT_LOGGER_LIB="$PWD/dist/liblogger.so" node examples/node/main.mjs
 ```
 
 ### .NET
 
 ```bash
-export EXIMIETAS_LOGGER_LIB="$PWD/dist/logger.dll"   # or liblogger.so / .dylib
+export POLYGLOT_LOGGER_LIB="$PWD/dist/logger.dll"   # or liblogger.so / .dylib
 dotnet run --project examples/dotnet
 ```
 

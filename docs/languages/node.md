@@ -1,6 +1,6 @@
 # Node.js / TypeScript guide
 
-Package: `@eximietas/logger` (`bindings/node`).
+Package: `@polyglot/logger` (`bindings/node`).
 
 ## Install
 
@@ -10,7 +10,7 @@ npm install
 npm run build
 ```
 
-In a monorepo workspace, depend on `"@eximietas/logger": "*"` and ensure the native library is built. See [monorepo](../monorepo.md).
+In a monorepo workspace, depend on `"@polyglot/logger": "*"` and ensure the native library is built. See [monorepo](../monorepo.md).
 
 ## Quick start
 
@@ -21,7 +21,7 @@ import {
   libraryVersion,
   abiVersion,
   type LoggerOptions,
-} from "@eximietas/logger";
+} from "@polyglot/logger";
 
 console.log(libraryVersion(), abiVersion());
 
@@ -99,7 +99,7 @@ One `Logger` instance is safe across worker threads for log/flush/stats. Prefer 
 ## Tests & example
 
 ```bash
-export EXIMIETAS_LOGGER_LIB=$PWD/dist/liblogger.so
+export POLYGLOT_LOGGER_LIB=$PWD/dist/liblogger.so
 cd bindings/node && npm test
 node examples/node/main.mjs
 ```

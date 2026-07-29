@@ -17,9 +17,9 @@ Outputs:
 | File | Purpose |
 | ---- | ------- |
 | `native/include/logger.h` | Stable C header |
-| `bindings/python/eximietas_logger/_ffi_generated.py` | ctypes signatures |
+| `bindings/python/polyglot_logger/_ffi_generated.py` | ctypes signatures |
 | `bindings/node/src/ffi.generated.ts` | Koffi bindings |
-| `bindings/dotnet/Eximietas.Logger/NativeMethods.Generated.cs` | P/Invoke |
+| `bindings/dotnet/Polyglot.Logger/NativeMethods.Generated.cs` | P/Invoke |
 | `native/abi_exports.md` | Human checklist |
 
 Codegen **fails** if `api/abi.json` and `native/export.go` disagree (missing export, undeclared export, or arg-count mismatch).
