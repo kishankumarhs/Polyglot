@@ -232,7 +232,7 @@ jobs:
 
       - name: Build NuGet package
         working-directory: bindings/dotnet/Polyglot.Logger
-        run: dotnet pack -c Release -o ../../dist/
+        run: dotnet pack -c Release -o ../dist/
 
       - name: Upload .NET packages
         uses: actions/upload-artifact@v4
