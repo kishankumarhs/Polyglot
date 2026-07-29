@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
@@ -20,10 +22,12 @@ jobs:
         run: go vet ./...
       - name: Test Go core and native layer
         run: go test ./... -race -count=1
-      - name: Codegen drift check
+      - name: Codegen drift check (core only)
         run: |
           go run ./cmd/codegen
-          git diff --exit-code -- native/include/logger.h bindings/python/polyglot_logger/_ffi_generated.py bindings/node/src/ffi.generated.ts bindings/dotnet/Polyglot.Logger/NativeMethods.Generated.cs || (echo "codegen drift: run go run ./cmd/codegen and commit" && exit 1)
+          git diff --exit-code -- native/include/logger.h || (echo "codegen drift in core: run go run ./cmd/codegen and commit" && exit 1)
+      - name: Note on binding codegen
+        run: echo "Binding FFI files are in independent submodules. Run codegen in each binding repo to update."
 
   native:
     strategy:
@@ -39,6 +43,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
@@ -66,6 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
@@ -87,6 +95,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
@@ -110,6 +120,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25.x"
