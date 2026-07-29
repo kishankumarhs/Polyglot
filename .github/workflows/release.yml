@@ -305,7 +305,7 @@ jobs:
           registry-url: https://registry.npmjs.org/
 
       - name: Publish to npm
-        run: npm publish *.tgz --provenance
+        run: npm publish *.tgz --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
