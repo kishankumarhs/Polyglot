@@ -132,6 +132,24 @@ Each has independent sinks, levels, and stats.
 - `logger_last_error(handle)` returns a message; `NULL` handle → create/global errors.
 - Bindings raise / throw native exceptions (`LoggerError`, `LoggerException`).
 
+## Child loggers (`With`)
+
+Prefer `With` for request-scoped fields instead of mutating shared context via `set_fields`:
+
+```go
+reqLog := root.With(map[string]any{"requestId": id})
+_ = reqLog.Info("handling", nil)
+```
+
+ABI: `logger_with(handle, fields_json)` returns a child handle. Closing a child is a no-op — close the root.
+
+## Context / trace helpers
+
+```go
+ctx := logger.ContextWithTrace(ctx, traceID, spanID)
+_ = log.LogContext(ctx, logger.LevelInfo, "ok", nil) // adds trace_id, span_id
+```
+
 ## Next
 
 - [Configuration reference](configuration.md)

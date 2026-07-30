@@ -11,6 +11,7 @@ Generated from `api/abi.json`. Each function must have a matching
 | `logger_create` | `handle` | string config_json |
 | `logger_log` | `int` | handle handle, int level, string message, string fields_json |
 | `logger_log_simple` | `int` | handle handle, int level, string message |
+| `logger_with` | `handle` | handle handle, string fields_json |
 | `logger_set_fields` | `int` | handle handle, string fields_json |
 | `logger_reload_config` | `int` | handle handle, string config_json |
 | `logger_flush` | `int` | handle handle |

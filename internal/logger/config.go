@@ -16,6 +16,12 @@ const (
 	OverflowBlock      = "block"
 )
 
+// StdoutFormat controls how the stdout sink renders lines.
+const (
+	StdoutFormatJSON = "json"
+	StdoutFormatText = "text"
+)
+
 // FileConfig configures the rotating file sink.
 type FileConfig struct {
 	Enabled    bool   `json:"enabled"`
@@ -23,7 +29,7 @@ type FileConfig struct {
 	MaxSizeMB  int    `json:"maxSizeMB"`
 	MaxBackups int    `json:"maxBackups"`
 	MaxAgeDays int    `json:"maxAgeDays"`
-	Compress   bool   `json:"compress"` // reserved; compression not yet implemented
+	Compress   bool   `json:"compress"`
 }
 
 // HTTPConfig configures the centralized HTTP log sink (NDJSON POST body).
@@ -36,30 +42,56 @@ type HTTPConfig struct {
 	FlushIntervalMS int               `json:"flush_interval_ms"`
 }
 
+// LokiConfig configures a native Grafana Loki push sink.
+type LokiConfig struct {
+	Enabled         bool              `json:"enabled"`
+	URL             string            `json:"url"` // e.g. http://loki:3100/loki/api/v1/push
+	TimeoutMS       int               `json:"timeout_ms"`
+	Headers         map[string]string `json:"headers"`
+	BatchSize       int               `json:"batch_size"`
+	FlushIntervalMS int               `json:"flush_interval_ms"`
+	// Labels are static Loki stream labels. service_name/level/environment are
+	// added automatically from each log entry when not already present.
+	Labels map[string]string `json:"labels"`
+}
+
+// SamplingConfig is zap-style first-N-then-every sampling per level+message.
+type SamplingConfig struct {
+	Enabled    bool `json:"enabled"`
+	Initial    int  `json:"initial"`    // always emit the first N matching logs
+	Thereafter int  `json:"thereafter"` // then emit 1 of every Thereafter
+}
+
 // Config controls logger behavior.
 type Config struct {
-	Service        string         `json:"service"`
-	ServiceVersion string         `json:"service_version,omitempty"`
-	Environment    string         `json:"environment,omitempty"`
-	Level          string         `json:"level"`
-	Stdout         bool           `json:"stdout"`
-	File           *FileConfig    `json:"file,omitempty"`
-	HTTP           *HTTPConfig    `json:"http,omitempty"`
-	Async          bool           `json:"async"`
-	QueueSize      int            `json:"queueSize"`
-	Overflow       string         `json:"overflow"`
-	Fields         map[string]any `json:"fields,omitempty"`
+	Service        string          `json:"service"`
+	ServiceVersion string          `json:"service_version,omitempty"`
+	Environment    string          `json:"environment,omitempty"`
+	Level          string          `json:"level"`
+	Stdout         bool            `json:"stdout"`
+	StdoutFormat   string          `json:"stdout_format,omitempty"` // json (default) | text
+	Caller         bool            `json:"caller,omitempty"`
+	Strict         bool            `json:"strict,omitempty"`
+	File           *FileConfig     `json:"file,omitempty"`
+	HTTP           *HTTPConfig     `json:"http,omitempty"`
+	Loki           *LokiConfig     `json:"loki,omitempty"`
+	Async          bool            `json:"async"`
+	QueueSize      int             `json:"queueSize"`
+	Overflow       string          `json:"overflow"`
+	Sampling       *SamplingConfig `json:"sampling,omitempty"`
+	Fields         map[string]any  `json:"fields,omitempty"`
 }
 
 // DefaultConfig returns sensible defaults.
 func DefaultConfig() Config {
 	return Config{
-		Service:   "app",
-		Level:     "info",
-		Stdout:    true,
-		Async:     true,
-		QueueSize: 10000,
-		Overflow:  OverflowDropNewest,
+		Service:      "app",
+		Level:        "info",
+		Stdout:       true,
+		StdoutFormat: StdoutFormatJSON,
+		Async:        true,
+		QueueSize:    10000,
+		Overflow:     OverflowDropNewest,
 		File: &FileConfig{
 			Enabled:    false,
 			MaxSizeMB:  100,
@@ -74,6 +106,14 @@ func DefaultConfig() Config {
 			FlushIntervalMS: 1000,
 			Headers:         map[string]string{},
 		},
+		Loki: &LokiConfig{
+			Enabled:         false,
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			Headers:         map[string]string{},
+			Labels:          map[string]string{},
+		},
 		Fields: map[string]any{},
 	}
 }
@@ -86,20 +126,24 @@ type rawConfig struct {
 	Level          *string         `json:"level"`
 	MinLevel       *string         `json:"min_level"`
 	Stdout         *bool           `json:"stdout"`
+	StdoutFormat   string          `json:"stdout_format"`
+	Caller         *bool           `json:"caller"`
+	Strict         *bool           `json:"strict"`
 	File           json.RawMessage `json:"file"`
 	FilePath       string          `json:"file_path"`
 	MaxSizeMB      int             `json:"max_size_mb"`
 	MaxBackups     int             `json:"max_backups"`
 	MaxAgeDays     int             `json:"max_age_days"`
 	HTTP           *HTTPConfig     `json:"http"`
+	Loki           *LokiConfig     `json:"loki"`
 	Async          *bool           `json:"async"`
 	QueueSize      int             `json:"queueSize"`
 	Overflow       string          `json:"overflow"`
+	Sampling       *SamplingConfig `json:"sampling"`
 	Fields         map[string]any  `json:"fields"`
 }
 
 // ParseConfigJSON parses and validates configuration from JSON.
-// Accepts nested schema and legacy flat keys (service_name, min_level, file_path, ...).
 func ParseConfigJSON(data []byte) (Config, error) {
 	cfg := DefaultConfig()
 	if len(data) == 0 {
@@ -130,6 +174,15 @@ func ParseConfigJSON(data []byte) (Config, error) {
 	if raw.Stdout != nil {
 		cfg.Stdout = *raw.Stdout
 	}
+	if raw.StdoutFormat != "" {
+		cfg.StdoutFormat = raw.StdoutFormat
+	}
+	if raw.Caller != nil {
+		cfg.Caller = *raw.Caller
+	}
+	if raw.Strict != nil {
+		cfg.Strict = *raw.Strict
+	}
 	if raw.Async != nil {
 		cfg.Async = *raw.Async
 	}
@@ -141,6 +194,9 @@ func ParseConfigJSON(data []byte) (Config, error) {
 	}
 	if raw.Fields != nil {
 		cfg.Fields = raw.Fields
+	}
+	if raw.Sampling != nil {
+		cfg.Sampling = raw.Sampling
 	}
 
 	if len(raw.File) > 0 && string(raw.File) != "null" {
@@ -172,6 +228,9 @@ func ParseConfigJSON(data []byte) (Config, error) {
 	if raw.HTTP != nil {
 		cfg.HTTP = raw.HTTP
 	}
+	if raw.Loki != nil {
+		cfg.Loki = raw.Loki
+	}
 
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -195,6 +254,14 @@ func (c *Config) Validate() error {
 	default:
 		return fmt.Errorf("overflow must be drop_newest, drop_oldest, or block")
 	}
+	switch strings.ToLower(strings.TrimSpace(c.StdoutFormat)) {
+	case "", StdoutFormatJSON:
+		c.StdoutFormat = StdoutFormatJSON
+	case StdoutFormatText:
+		c.StdoutFormat = StdoutFormatText
+	default:
+		return fmt.Errorf("stdout_format must be json or text")
+	}
 	if c.QueueSize < 0 {
 		return fmt.Errorf("queueSize must be >= 0")
 	}
@@ -204,11 +271,23 @@ func (c *Config) Validate() error {
 	if c.Fields == nil {
 		c.Fields = map[string]any{}
 	}
+	if c.Sampling != nil && c.Sampling.Enabled {
+		if c.Sampling.Initial < 0 {
+			return fmt.Errorf("sampling.initial must be >= 0")
+		}
+		if c.Sampling.Thereafter <= 0 {
+			c.Sampling.Thereafter = 100
+		}
+		if c.Sampling.Initial == 0 {
+			c.Sampling.Initial = 100
+		}
+	}
 
 	fileEnabled := c.FileEnabled()
 	httpEnabled := c.HTTPEnabled()
-	if !c.Stdout && !fileEnabled && !httpEnabled {
-		return fmt.Errorf("at least one sink must be enabled (stdout, file, or http)")
+	lokiEnabled := c.LokiEnabled()
+	if !c.Stdout && !fileEnabled && !httpEnabled && !lokiEnabled {
+		return fmt.Errorf("at least one sink must be enabled (stdout, file, http, or loki)")
 	}
 
 	if c.File == nil {
@@ -258,6 +337,39 @@ func (c *Config) Validate() error {
 			c.HTTP.FlushIntervalMS = 1000
 		}
 	}
+
+	if c.Loki == nil {
+		c.Loki = &LokiConfig{
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			Headers:         map[string]string{},
+			Labels:          map[string]string{},
+		}
+	}
+	if c.Loki.Headers == nil {
+		c.Loki.Headers = map[string]string{}
+	}
+	if c.Loki.Labels == nil {
+		c.Loki.Labels = map[string]string{}
+	}
+	if lokiEnabled {
+		if strings.TrimSpace(c.Loki.URL) == "" {
+			return fmt.Errorf("loki.url is required when loki sink is enabled")
+		}
+		if err := validateCollectorURL(c.Loki.URL); err != nil {
+			return err
+		}
+		if c.Loki.TimeoutMS <= 0 {
+			c.Loki.TimeoutMS = 5000
+		}
+		if c.Loki.BatchSize <= 0 {
+			c.Loki.BatchSize = 50
+		}
+		if c.Loki.FlushIntervalMS <= 0 {
+			c.Loki.FlushIntervalMS = 1000
+		}
+	}
 	return nil
 }
 
@@ -269,13 +381,17 @@ func (c Config) FileEnabled() bool {
 	if c.File.Enabled {
 		return strings.TrimSpace(c.File.Path) != ""
 	}
-	// Nested object with path but enabled omitted/false: treat path as enable signal only when Enabled is true.
 	return false
 }
 
 // HTTPEnabled reports whether the HTTP sink should be active.
 func (c Config) HTTPEnabled() bool {
 	return c.HTTP != nil && c.HTTP.Enabled && strings.TrimSpace(c.HTTP.URL) != ""
+}
+
+// LokiEnabled reports whether the Loki sink should be active.
+func (c Config) LokiEnabled() bool {
+	return c.Loki != nil && c.Loki.Enabled && strings.TrimSpace(c.Loki.URL) != ""
 }
 
 // MinLevelValue returns the parsed minimum level.
@@ -309,39 +425,38 @@ func parentDir(path string) string {
 }
 
 // ParseConfigYAML parses and validates configuration from YAML bytes.
-// Accepts the same schema as JSON (converted to JSON internally).
 func ParseConfigYAML(data []byte) (Config, error) {
 	if len(data) == 0 {
 		return DefaultConfig(), nil
 	}
-
-	// Unmarshal YAML to a generic map, then re-encode as JSON for consistent parsing
 	var yamlData interface{}
 	if err := yaml.Unmarshal(data, &yamlData); err != nil {
 		return Config{}, fmt.Errorf("invalid config yaml: %w", err)
 	}
-
-	// Convert to JSON and parse using existing logic
 	jsonData, err := json.Marshal(yamlData)
 	if err != nil {
 		return Config{}, fmt.Errorf("failed to convert yaml to json: %w", err)
 	}
-
 	return ParseConfigJSON(jsonData)
+}
+
+// strictRequested is true when config or environment demands fail-fast loading.
+func strictRequested(cfgStrict bool) bool {
+	if cfgStrict {
+		return true
+	}
+	v := strings.TrimSpace(strings.ToLower(os.Getenv("POLYLOG_STRICT")))
+	return v == "1" || v == "true" || v == "yes"
 }
 
 // LoadConfigFromFile loads configuration from a file path.
 // Automatically detects YAML (.yaml, .yml) or JSON (.json) format based on extension.
-// If path is empty string, checks environment variables in order:
-//   - POLYGLOT_CONFIG_PATH
-//   - POLYGLOT_CONFIG_FILE
+// If path is empty string, checks POLYGLOT_CONFIG_PATH / POLYGLOT_CONFIG_FILE.
 //
-// Returns DefaultConfig if no path is found or file does not exist.
-// Returns an error if the file exists but cannot be parsed.
+// When strict mode is off (default), a missing file returns DefaultConfig.
+// When strict is on (config.strict or POLYLOG_STRICT=1), a missing/empty path is an error.
 func LoadConfigFromFile(filePath string) (Config, error) {
 	path := filePath
-
-	// If no explicit path provided, check environment variables
 	if path == "" {
 		path = os.Getenv("POLYGLOT_CONFIG_PATH")
 		if path == "" {
@@ -349,27 +464,39 @@ func LoadConfigFromFile(filePath string) (Config, error) {
 		}
 	}
 
+	strict := strictRequested(false)
 	if path == "" {
+		if strict {
+			return Config{}, fmt.Errorf("strict mode: no config path (set POLYGLOT_CONFIG_PATH or pass a file)")
+		}
 		return DefaultConfig(), nil
 	}
 
-	// Check if file exists
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// File not found; return defaults and non-error (graceful degradation)
+			if strict {
+				return Config{}, fmt.Errorf("strict mode: config file not found: %s", path)
+			}
 			fmt.Fprintf(os.Stderr, "[polyglot-logger] config file not found: %s; using defaults\n", path)
 			return DefaultConfig(), nil
 		}
 		return Config{}, fmt.Errorf("failed to read config file %s: %w", path, err)
 	}
 
-	// Detect format based on file extension
 	lower := strings.ToLower(path)
+	var cfg Config
 	if strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
-		return ParseConfigYAML(data)
+		cfg, err = ParseConfigYAML(data)
+	} else {
+		cfg, err = ParseConfigJSON(data)
 	}
-
-	// Default to JSON parsing
-	return ParseConfigJSON(data)
+	if err != nil {
+		return Config{}, err
+	}
+	// Config file may itself enable strict for subsequent reloads / tooling.
+	if strictRequested(cfg.Strict) && strings.TrimSpace(cfg.Service) == "" {
+		return Config{}, fmt.Errorf("strict mode: service is required")
+	}
+	return cfg, nil
 }

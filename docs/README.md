@@ -6,6 +6,7 @@ Cross-language structured logging: one Go core, a stable C ABI, and thin binding
 
 | Doc | Audience |
 | --- | --- |
+| [Zero-config](zero-config.md) | `polyglot.yaml` auto-discovery |
 | [Getting started](getting-started.md) | First install, build, and hello-world |
 | [User guide](user-guide.md) | Everyday usage: levels, fields, async, stats, lifecycle |
 | [Configuration reference](configuration.md) | Full JSON schema and defaults |

@@ -41,6 +41,9 @@ var (
 
 	versionOnce sync.Once
 	versionCStr *C.char
+
+	// testPanicCreate is flipped by tests to verify recover wrappers.
+	testPanicCreate bool
 )
 
 func setGlobalErr(err error) {
@@ -115,19 +118,7 @@ func lookup(h unsafe.Pointer) *nativeInstance {
 	return loggers[handleID(h)]
 }
 
-func createFromJSON(configJSON *C.char) unsafe.Pointer {
-	cfg, err := core.ParseConfigJSON([]byte(goString(configJSON)))
-	if err != nil {
-		setGlobalErr(err)
-		return nil
-	}
-	log, err := core.New(cfg)
-	if err != nil {
-		setGlobalErr(err)
-		return nil
-	}
-	// The handle is a distinct C address used only as a map key; it is never
-	// dereferenced by the caller.
+func registerLogger(log *core.Logger) unsafe.Pointer {
 	handle := handles.acquire()
 	if handle == nil {
 		_ = log.Close()
@@ -142,8 +133,34 @@ func createFromJSON(configJSON *C.char) unsafe.Pointer {
 	return handle
 }
 
+func createFromJSON(configJSON *C.char) (result unsafe.Pointer) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_create: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			result = nil
+		}
+	}()
+	if testPanicCreate {
+		panic("injected create panic")
+	}
+	cfg, err := core.ParseConfigJSON([]byte(goString(configJSON)))
+	if err != nil {
+		setGlobalErr(err)
+		return nil
+	}
+	log, err := core.New(cfg)
+	if err != nil {
+		setGlobalErr(err)
+		return nil
+	}
+	return registerLogger(log)
+}
+
 //export logger_version
 func logger_version() *C.char {
+	defer func() { _ = recover() }()
 	versionOnce.Do(func() {
 		versionCStr = C.CString(core.Version)
 	})
@@ -151,7 +168,12 @@ func logger_version() *C.char {
 }
 
 //export logger_abi_version
-func logger_abi_version() C.int {
+func logger_abi_version() (rc C.int) {
+	defer func() {
+		if recover() != nil {
+			rc = 0
+		}
+	}()
 	return C.int(core.ABIVersion)
 }
 
@@ -166,7 +188,15 @@ func logger_create(configJSON *C.char) unsafe.Pointer {
 }
 
 //export logger_log
-func logger_log(handle unsafe.Pointer, level C.int, message *C.char, fieldsJSON *C.char) C.int {
+func logger_log(handle unsafe.Pointer, level C.int, message *C.char, fieldsJSON *C.char) (rc C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_log: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			rc = -1
+		}
+	}()
 	inst := lookup(handle)
 	if inst == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
@@ -186,8 +216,52 @@ func logger_log_simple(handle unsafe.Pointer, level C.int, message *C.char) C.in
 	return logger_log(handle, level, message, nil)
 }
 
+//export logger_with
+func logger_with(handle unsafe.Pointer, fieldsJSON *C.char) (result unsafe.Pointer) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_with: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			result = nil
+		}
+	}()
+	inst := lookup(handle)
+	if inst == nil {
+		setGlobalErr(fmt.Errorf("invalid logger handle"))
+		return nil
+	}
+	fields, err := core.ParseFieldsJSON(goString(fieldsJSON))
+	if err != nil {
+		inst.setErr(err)
+		setGlobalErr(err)
+		return nil
+	}
+	child := inst.log.With(fields)
+	handleOut := handles.acquire()
+	if handleOut == nil {
+		setGlobalErr(fmt.Errorf("out of memory allocating logger handle"))
+		return nil
+	}
+	childInst := &nativeInstance{log: child}
+	mu.Lock()
+	loggers[handleID(handleOut)] = childInst
+	mu.Unlock()
+	inst.setErr(nil)
+	setGlobalErr(nil)
+	return handleOut
+}
+
 //export logger_set_fields
-func logger_set_fields(handle unsafe.Pointer, fieldsJSON *C.char) C.int {
+func logger_set_fields(handle unsafe.Pointer, fieldsJSON *C.char) (rc C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_set_fields: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			rc = -1
+		}
+	}()
 	inst := lookup(handle)
 	if inst == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
@@ -202,7 +276,15 @@ func logger_set_fields(handle unsafe.Pointer, fieldsJSON *C.char) C.int {
 }
 
 //export logger_reload_config
-func logger_reload_config(handle unsafe.Pointer, configJSON *C.char) C.int {
+func logger_reload_config(handle unsafe.Pointer, configJSON *C.char) (rc C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_reload_config: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			rc = -1
+		}
+	}()
 	inst := lookup(handle)
 	if inst == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
@@ -222,7 +304,15 @@ func logger_reload_config(handle unsafe.Pointer, configJSON *C.char) C.int {
 }
 
 //export logger_flush
-func logger_flush(handle unsafe.Pointer) C.int {
+func logger_flush(handle unsafe.Pointer) (rc C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_flush: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			rc = -1
+		}
+	}()
 	inst := lookup(handle)
 	if inst == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
@@ -237,7 +327,15 @@ func logger_flush(handle unsafe.Pointer) C.int {
 }
 
 //export logger_close
-func logger_close(handle unsafe.Pointer) C.int {
+func logger_close(handle unsafe.Pointer) (rc C.int) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_close: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			rc = -1
+		}
+	}()
 	if handle == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
 		return -1
@@ -273,7 +371,15 @@ func logger_close(handle unsafe.Pointer) C.int {
 }
 
 //export logger_stats
-func logger_stats(handle unsafe.Pointer) *C.char {
+func logger_stats(handle unsafe.Pointer) (out *C.char) {
+	defer func() {
+		if r := recover(); r != nil {
+			err := fmt.Errorf("panic in logger_stats: %v", r)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
+			setGlobalErr(err)
+			out = nil
+		}
+	}()
 	inst := lookup(handle)
 	if inst == nil {
 		setGlobalErr(fmt.Errorf("invalid logger handle"))
@@ -290,7 +396,12 @@ func logger_stats(handle unsafe.Pointer) *C.char {
 }
 
 //export logger_last_error
-func logger_last_error(handle unsafe.Pointer) *C.char {
+func logger_last_error(handle unsafe.Pointer) (out *C.char) {
+	defer func() {
+		if recover() != nil {
+			out = nil
+		}
+	}()
 	if handle == nil {
 		globalErrMu.Lock()
 		defer globalErrMu.Unlock()
@@ -324,24 +435,19 @@ func logger_last_error(handle unsafe.Pointer) *C.char {
 
 //export logger_free_string
 func logger_free_string(s *C.char) {
+	defer func() { _ = recover() }()
 	// No-op: stats/error/version strings are owned by the library.
-	// Retained so bindings can call it safely without double-free risk.
 	_ = s
 }
 
-// logger_create_from_config_file loads configuration from a file path and creates a logger.
-// Supports both JSON and YAML formats (auto-detected by extension).
-// Path should be an absolute or relative path. If empty string, uses DefaultConfig.
-// Returns NULL and sets global error on failure.
-// Defensive: uses defer recover() to catch panics; prints to stderr instead of crashing.
-//
 //export logger_create_from_config_file
-func logger_create_from_config_file(configPath *C.char) unsafe.Pointer {
+func logger_create_from_config_file(configPath *C.char) (result unsafe.Pointer) {
 	defer func() {
 		if r := recover(); r != nil {
 			err := fmt.Errorf("panic in logger_create_from_config_file: %v", r)
-			fmt.Fprintf(os.Stderr, "[polyglot-logger] FATAL: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
 			setGlobalErr(err)
+			result = nil
 		}
 	}()
 
@@ -357,20 +463,7 @@ func logger_create_from_config_file(configPath *C.char) unsafe.Pointer {
 		setGlobalErr(err)
 		return nil
 	}
-
-	handle := handles.acquire()
-	if handle == nil {
-		_ = log.Close()
-		setGlobalErr(fmt.Errorf("out of memory allocating logger handle"))
-		return nil
-	}
-
-	inst := &nativeInstance{log: log}
-	mu.Lock()
-	loggers[handleID(handle)] = inst
-	mu.Unlock()
-	setGlobalErr(nil)
-	return handle
+	return registerLogger(log)
 }
 
 func main() {}

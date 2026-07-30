@@ -32,6 +32,7 @@ type httpSink struct {
 	buffMax  int
 	dropped  int
 	interval time.Duration
+	failures int
 	stopCh   chan struct{}
 	doneCh   chan struct{}
 	closed   bool
@@ -157,9 +158,43 @@ func (s *httpSink) tickerLoop() {
 		case <-s.stopCh:
 			return
 		case <-t.C:
+			s.mu.Lock()
+			wait := s.backoffLocked()
+			s.mu.Unlock()
+			if wait > 0 {
+				timer := time.NewTimer(wait)
+				select {
+				case <-s.stopCh:
+					timer.Stop()
+					return
+				case <-timer.C:
+				}
+			}
 			_ = s.Flush()
 		}
 	}
+}
+
+// backoffLocked returns how long to wait before the next flush after failures.
+// Uses exponential backoff with jitter: min(30s, 100ms * 2^failures) ± 20%.
+func (s *httpSink) backoffLocked() time.Duration {
+	if s.failures <= 0 {
+		return 0
+	}
+	exp := s.failures
+	if exp > 8 {
+		exp = 8
+	}
+	base := time.Duration(100*(1<<uint(exp))) * time.Millisecond
+	if base > 30*time.Second {
+		base = 30 * time.Second
+	}
+	// Deterministic jitter from failure count to avoid importing math/rand globally.
+	jitter := time.Duration(int64(base) / 5 * int64((s.failures%5)-2) / 2)
+	if base+jitter < 0 {
+		return 0
+	}
+	return base + jitter
 }
 
 // flushLocked POSTs the buffered lines. The batch is retained unless the
@@ -179,6 +214,7 @@ func (s *httpSink) flushLocked() error {
 
 	req, err := http.NewRequest(http.MethodPost, s.url, bytes.NewReader(buf.Bytes()))
 	if err != nil {
+		s.failures++
 		return err
 	}
 	req.Header.Set("Content-Type", "application/x-ndjson")
@@ -188,15 +224,18 @@ func (s *httpSink) flushLocked() error {
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		s.failures++
 		return err
 	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		s.failures++
 		return fmt.Errorf("http sink status %d (%d lines retained)", resp.StatusCode, len(s.batch))
 	}
 
 	s.batch = s.batch[:0]
+	s.failures = 0
 	return nil
 }
 

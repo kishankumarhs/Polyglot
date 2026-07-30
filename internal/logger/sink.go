@@ -25,7 +25,7 @@ type bufferedSink interface {
 func buildSinks(cfg Config) ([]Sink, error) {
 	var sinks []Sink
 	if cfg.Stdout {
-		sinks = append(sinks, newStdoutSink())
+		sinks = append(sinks, newStdoutSink(cfg.StdoutFormat))
 	}
 	if cfg.FileEnabled() {
 		fs, err := newFileSink(cfg.File)
@@ -41,6 +41,14 @@ func buildSinks(cfg Config) ([]Sink, error) {
 			return nil, fmt.Errorf("http sink: %w", err)
 		}
 		sinks = append(sinks, hs)
+	}
+	if cfg.LokiEnabled() {
+		ls, err := newLokiSink(cfg.Loki)
+		if err != nil {
+			_ = closeSinks(sinks)
+			return nil, fmt.Errorf("loki sink: %w", err)
+		}
+		sinks = append(sinks, ls)
 	}
 	if len(sinks) == 0 {
 		return nil, fmt.Errorf("no sinks configured")
