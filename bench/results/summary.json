@@ -1,31 +1,38 @@
 {
   "sync_file_ops": {
-    "Polyglot": 12039.924389274835
+    "Polyglot": 89573.62952346829,
+    "Zap": 64164.260506897655,
+    "Zerolog": 82576.38315441784,
+    "slog (ref)": 96116.87812379854
   },
   "latency_p99_ns": {
-    "Polyglot": 544600.0,
-    "Polyglot (Node)": 144800.0,
-    "Pino": 67200.0
+    "Polyglot": 45800.0,
+    "Zap": 71300.0,
+    "Zerolog": 43500.0,
+    "Polyglot (Node)": 146600.0,
+    "Pino": 88100.0
   },
   "scale_ops": {
-    "1": 18930.0,
-    "2": 14615.0,
-    "4": 17014.0,
-    "8": 30147.0,
-    "16": 30151.0
+    "1": 60198.0,
+    "2": 53008.0,
+    "4": 47375.0,
+    "8": 46568.0,
+    "16": 57155.0,
+    "32": 48206.0,
+    "64": 51453.0
   },
   "ffi_ns": {
-    "FFI only": 1632.0,
-    "Full sync log": 17573.0
+    "FFI only": 1475.0,
+    "Full sync log": 16108.0
   },
   "node_ops": {
-    "Polyglot (Node)": 32753.0,
-    "Pino": 58686.0
+    "Polyglot (Node)": 33158.0,
+    "Pino": 49348.0
   },
   "bindings_ops": {
-    "Polyglot (Python)": 13874.0,
-    "stdlib logging": 9531.0,
-    "Polyglot (.NET)": 5790.0,
-    "Serilog": 9070.0
+    "Polyglot (Python)": 30546.0,
+    "stdlib logging": 35792.0,
+    "Polyglot (.NET)": 9436.0,
+    "Serilog": 15308.0
   }
 }
