@@ -2,16 +2,16 @@
 <rect width="100%" height="100%" fill="#fafafa"/>
 <text x="360.0" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">Sync file throughput (ops/s)</text>
 <text x="360.0" y="344" text-anchor="middle" font-size="12" fill="#666">ops/s</text>
-<rect x="144.5" y="62.1" width="91.0" height="237.9" fill="#2563eb" rx="4"/>
-<text x="190.0" y="318" text-anchor="middle" font-size="11" fill="#333">Polyglot</text>
-<text x="190.0" y="56.1" text-anchor="middle" font-size="11" fill="#111">50.8k</text>
-<rect x="284.5" y="85.6" width="91.0" height="214.4" fill="#2563eb" rx="4"/>
-<text x="330.0" y="318" text-anchor="middle" font-size="11" fill="#333">Zap</text>
-<text x="330.0" y="79.6" text-anchor="middle" font-size="11" fill="#111">45.8k</text>
-<rect x="424.5" y="112.4" width="91.0" height="187.6" fill="#2563eb" rx="4"/>
-<text x="470.0" y="318" text-anchor="middle" font-size="11" fill="#333">Zerolog</text>
-<text x="470.0" y="106.4" text-anchor="middle" font-size="11" fill="#111">40.1k</text>
-<rect x="564.5" y="50.0" width="91.0" height="250.0" fill="#2563eb" rx="4"/>
-<text x="610.0" y="318" text-anchor="middle" font-size="11" fill="#333">slog (ref)</text>
-<text x="610.0" y="44.0" text-anchor="middle" font-size="11" fill="#111">53.4k</text>
+<rect x="68.0" y="61.6" width="104.0" height="228.4" fill="#2563eb" rx="4"/>
+<text x="120.0" y="312" text-anchor="middle" font-size="11" fill="#333">Polyglot</text>
+<text x="120.0" y="55.6" text-anchor="middle" font-size="11" fill="#111">50.8k</text>
+<rect x="228.0" y="84.1" width="104.0" height="205.9" fill="#2563eb" rx="4"/>
+<text x="280.0" y="312" text-anchor="middle" font-size="11" fill="#333">Zap</text>
+<text x="280.0" y="78.1" text-anchor="middle" font-size="11" fill="#111">45.8k</text>
+<rect x="388.0" y="109.9" width="104.0" height="180.1" fill="#2563eb" rx="4"/>
+<text x="440.0" y="312" text-anchor="middle" font-size="11" fill="#333">Zerolog</text>
+<text x="440.0" y="103.9" text-anchor="middle" font-size="11" fill="#111">40.1k</text>
+<rect x="548.0" y="50.0" width="104.0" height="240.0" fill="#2563eb" rx="4"/>
+<text x="600.0" y="312" text-anchor="middle" font-size="11" fill="#333">slog (ref)</text>
+<text x="600.0" y="44.0" text-anchor="middle" font-size="11" fill="#111">53.4k</text>
 </svg>

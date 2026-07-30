@@ -20,13 +20,13 @@ python scripts/bench-charts.py   # charts from summary.json only
 
 Numbers come from `make bench` into [`results/summary.json`](results/summary.json). Until you regenerate, charts may be a previous snapshot.
 
-![Throughput](results/throughput.svg)
+![Throughput](results/throughput.png)
 
-![P99 latency](results/latency.svg)
+![P99 latency](results/latency.png)
 
-![Scale](results/scale.svg)
+![Scale](results/scale.png)
 
-![FFI](results/ffi.svg)
+![FFI](results/ffi.png)
 
 ## What we measure
 

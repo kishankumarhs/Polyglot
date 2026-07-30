@@ -55,7 +55,15 @@ If you only write Go, use Zap. If you only write Node, use Pino. Polyglot is for
 
 On a Windows laptop (i7-1355U), Go sync file throughput is in the same ballpark as Zap (~50k vs ~46k ops/s in the last local run). Node async sits behind Pino; FFI crossing is about 1.6 µs and is not the bottleneck.
 
-Charts and methodology: [bench/README.md](bench/README.md). Regenerate with:
+![Sync file throughput](bench/results/throughput.svg)
+
+![P99 latency](bench/results/latency.svg)
+
+![Scale](bench/results/scale.svg)
+
+![FFI](bench/results/ffi.svg)
+
+Methodology and how to regenerate: [bench/README.md](bench/README.md).
 
 ```bash
 make build-native && make bench
