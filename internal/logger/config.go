@@ -143,17 +143,9 @@ type rawConfig struct {
 	Fields         map[string]any  `json:"fields"`
 }
 
-// ParseConfigJSON parses and validates configuration from JSON.
-func ParseConfigJSON(data []byte) (Config, error) {
-	cfg := DefaultConfig()
-	if len(data) == 0 {
-		return cfg, nil
-	}
-
-	var raw rawConfig
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return Config{}, fmt.Errorf("invalid config json: %w", err)
-	}
+// applyRawOverlay merges sparse raw fields onto base (only present keys win).
+func applyRawOverlay(base Config, raw rawConfig) (Config, error) {
+	cfg := base
 
 	if raw.Service != nil {
 		cfg.Service = *raw.Service
@@ -232,7 +224,125 @@ func ParseConfigJSON(data []byte) (Config, error) {
 		cfg.Loki = raw.Loki
 	}
 
+	return cfg, nil
+}
+
+// ParseConfigJSON parses and validates configuration from JSON.
+func ParseConfigJSON(data []byte) (Config, error) {
+	cfg := DefaultConfig()
+	if len(data) == 0 {
+		return cfg, nil
+	}
+
+	var raw rawConfig
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return Config{}, fmt.Errorf("invalid config json: %w", err)
+	}
+
+	cfg, err := applyRawOverlay(cfg, raw)
+	if err != nil {
+		return Config{}, err
+	}
 	if err := cfg.Validate(); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
+}
+
+// ApplyConfigOverlay merges sparse overlay JSON onto base. Empty overlay is a no-op.
+func ApplyConfigOverlay(base Config, overlayJSON []byte) (Config, error) {
+	trimmed := strings.TrimSpace(string(overlayJSON))
+	if trimmed == "" || trimmed == "{}" || trimmed == "null" {
+		return base, nil
+	}
+	var raw rawConfig
+	if err := json.Unmarshal(overlayJSON, &raw); err != nil {
+		return Config{}, fmt.Errorf("invalid overlay json: %w", err)
+	}
+	return applyRawOverlay(base, raw)
+}
+
+// hasOverlayKeys reports whether overlay JSON sets any fields.
+func hasOverlayKeys(overlayJSON []byte) bool {
+	trimmed := strings.TrimSpace(string(overlayJSON))
+	if trimmed == "" || trimmed == "{}" || trimmed == "null" {
+		return false
+	}
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(overlayJSON, &m); err != nil {
+		return false
+	}
+	return len(m) > 0
+}
+
+// CreateConfigFromFileWithOverrides loads a config file (or discovers one),
+// applies sparse constructor overlay JSON, validates, and optionally prints diagnostics.
+//
+// If explicitPath is empty, uses ResolveConfigPath (env → cwd → parents, stop at .git).
+func CreateConfigFromFileWithOverrides(explicitPath string, overlayJSON []byte) (Config, MergeDiag, error) {
+	resolve := ResolveConfigPath(explicitPath)
+	diag := MergeDiag{Resolve: resolve, HadOverlay: hasOverlayKeys(overlayJSON)}
+
+	var base Config
+	var err error
+	if resolve.Path != "" {
+		if _, statErr := os.Stat(resolve.Path); statErr == nil {
+			base, err = loadConfigFileExact(resolve.Path)
+			if err != nil {
+				return Config{}, diag, err
+			}
+			diag.HadFile = true
+		} else if os.IsNotExist(statErr) {
+			if strictRequested(false) {
+				return Config{}, diag, fmt.Errorf("strict mode: config file not found: %s", resolve.Path)
+			}
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] config file not found: %s; using defaults\n", resolve.Path)
+			base = DefaultConfig()
+			diag.HadFile = false
+		} else {
+			return Config{}, diag, fmt.Errorf("failed to stat config file %s: %w", resolve.Path, statErr)
+		}
+	} else {
+		if strictRequested(false) {
+			return Config{}, diag, fmt.Errorf("strict mode: no config path (set POLYGLOT_CONFIG or pass a file)")
+		}
+		base = DefaultConfig()
+	}
+
+	cfg, err := ApplyConfigOverlay(base, overlayJSON)
+	if err != nil {
+		return Config{}, diag, err
+	}
+	if err := cfg.Validate(); err != nil {
+		return Config{}, diag, err
+	}
+	diag.Config = cfg
+	PrintStartupDiagnostics(diag)
+	return cfg, diag, nil
+}
+
+// loadConfigFileExact reads and parses a config file at an exact path (no env fallback).
+func loadConfigFileExact(path string) (Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if strictRequested(false) {
+				return Config{}, fmt.Errorf("strict mode: config file not found: %s", path)
+			}
+			fmt.Fprintf(os.Stderr, "[polyglot-logger] config file not found: %s; using defaults\n", path)
+			return DefaultConfig(), nil
+		}
+		return Config{}, fmt.Errorf("failed to read config file %s: %w", path, err)
+	}
+
+	lower := strings.ToLower(path)
+	var cfg Config
+	if strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
+		cfg, err = ParseConfigYAML(data)
+	} else {
+		cfg, err = ParseConfigJSON(data)
+	}
+	if err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -451,46 +561,21 @@ func strictRequested(cfgStrict bool) bool {
 
 // LoadConfigFromFile loads configuration from a file path.
 // Automatically detects YAML (.yaml, .yml) or JSON (.json) format based on extension.
-// If path is empty string, checks POLYGLOT_CONFIG_PATH / POLYGLOT_CONFIG_FILE.
+// If path is empty, uses ResolveConfigPath (POLYGLOT_CONFIG → cwd → parents, stop at .git).
 //
 // When strict mode is off (default), a missing file returns DefaultConfig.
 // When strict is on (config.strict or POLYLOG_STRICT=1), a missing/empty path is an error.
+// Does not print startup diagnostics (use CreateConfigFromFileWithOverrides for that).
 func LoadConfigFromFile(filePath string) (Config, error) {
-	path := filePath
-	if path == "" {
-		path = os.Getenv("POLYGLOT_CONFIG_PATH")
-		if path == "" {
-			path = os.Getenv("POLYGLOT_CONFIG_FILE")
-		}
-	}
-
-	strict := strictRequested(false)
-	if path == "" {
-		if strict {
-			return Config{}, fmt.Errorf("strict mode: no config path (set POLYGLOT_CONFIG_PATH or pass a file)")
+	resolve := ResolveConfigPath(filePath)
+	if resolve.Path == "" {
+		if strictRequested(false) {
+			return Config{}, fmt.Errorf("strict mode: no config path (set POLYGLOT_CONFIG or pass a file)")
 		}
 		return DefaultConfig(), nil
 	}
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			if strict {
-				return Config{}, fmt.Errorf("strict mode: config file not found: %s", path)
-			}
-			fmt.Fprintf(os.Stderr, "[polyglot-logger] config file not found: %s; using defaults\n", path)
-			return DefaultConfig(), nil
-		}
-		return Config{}, fmt.Errorf("failed to read config file %s: %w", path, err)
-	}
-
-	lower := strings.ToLower(path)
-	var cfg Config
-	if strings.HasSuffix(lower, ".yaml") || strings.HasSuffix(lower, ".yml") {
-		cfg, err = ParseConfigYAML(data)
-	} else {
-		cfg, err = ParseConfigJSON(data)
-	}
+	cfg, err := loadConfigFileExact(resolve.Path)
 	if err != nil {
 		return Config{}, err
 	}

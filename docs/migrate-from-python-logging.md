@@ -25,6 +25,6 @@ bound = log.bind(user_id=1)  # alias of with_fields
 bound.info("hello")
 ```
 
-Use `polyglot-logger` ≥ 0.3.0 for bundled natives. Install `polyglot-logger[yaml]` if you need PyYAML for `polyglot.yaml`. Don't share `set_fields` across threads for request data — use `with_fields`.
+Use `polyglot-logger` 0.3.x for bundled natives. `polyglot.yaml` is loaded by the native core (no PyYAML required). Don't share `set_fields` across threads for request data — use `with_fields`.
 
 More: [first-log.md](first-log.md) · [languages/python.md](languages/python.md)

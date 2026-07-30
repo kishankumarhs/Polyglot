@@ -1,6 +1,6 @@
 # First log
 
-Get a structured log line without compiling Go. Use published packages (`v0.3.0+`). Native libs ship inside the package for Linux, Windows, and macOS Apple Silicon.
+Get a structured log line without compiling Go. Current publish line is **0.3.x** (check the registry for the latest patch: `npm view @polyglot-logger/node version`, PyPI, or NuGet). Native libs ship inside the package for Linux, Windows, and macOS Apple Silicon.
 
 Intel Macs: arm64 is what we ship today. For amd64 you may need to set `POLYGLOT_LOGGER_LIB` until CI covers Intel again.
 
@@ -10,6 +10,7 @@ Intel Macs: arm64 is what we ship today. For amd64 you may need to set `POLYGLOT
 mkdir demo-node && cd demo-node
 npm init -y
 npm install @polyglot-logger/node
+# or pin the current line: npm install @polyglot-logger/node@^0.3.0
 ```
 
 ```js
@@ -82,15 +83,20 @@ stdout: true
 stdout_format: text
 ```
 
-Bindings walk up from `cwd` looking for `polyglot.yaml`. See [zero-config.md](zero-config.md).
+Bindings resolve `POLYGLOT_CONFIG` → cwd → parents (stop at `.git`). See [zero-config.md](zero-config.md) · [sdk.md](sdk.md).
 
 ## Stuck?
 
+```bash
+go run ./cmd/polyglot doctor
+# or: make doctor
+```
+
 | Symptom | Fix |
 | --- | --- |
-| `unable to load native logger library` | Package ≥ 0.3.0, or set `POLYGLOT_LOGGER_LIB` to a built native lib |
-| Empty / wrong config | Check that `polyglot.yaml` is above `cwd`, or pass options in the constructor |
-| Need a local diagnose | From this repo: `go run ./cmd/polyglot doctor` |
+| `unable to load native logger library` | Package 0.3.x, or set `POLYGLOT_LOGGER_LIB` to a built native lib |
+| Empty / wrong config | Put `polyglot.yaml` at the git repo root, or set `POLYGLOT_CONFIG`; check startup diagnostics on stderr |
+| Need a local diagnose | `go run ./cmd/polyglot doctor` |
 
 ## Working on the core?
 

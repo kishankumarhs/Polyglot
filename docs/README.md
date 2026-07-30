@@ -4,10 +4,11 @@ Shared logging core (Go) + C ABI + bindings for Python, Node, and .NET.
 
 ## Start here
 
+- [SDK comparison](sdk.md) — Node / Python / .NET side by side
 - [First log](first-log.md) — install a package, print a line
 - [Getting started](getting-started.md) — build from source
 - [User guide](user-guide.md) — levels, fields, async, flush
-- [Zero-config](zero-config.md) — `polyglot.yaml`
+- [Zero-config](zero-config.md) — `polyglot.yaml` discovery + merge
 - [Configuration](configuration.md)
 - [Sinks](sinks.md)
 - [Benchmarks](../bench/README.md)

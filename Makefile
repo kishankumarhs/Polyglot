@@ -1,4 +1,4 @@
-.PHONY: codegen test build-native demo clean doctor check-submodules bench bench-smoke bench-pprof bench-charts
+.PHONY: codegen test build-native demo clean doctor check-submodules check-doc-versions bench bench-smoke bench-pprof bench-charts
 
 codegen:
 	go run ./cmd/codegen
@@ -20,6 +20,9 @@ doctor:
 
 check-submodules:
 	bash scripts/check-submodules.sh
+
+check-doc-versions:
+	bash scripts/check-doc-versions.sh
 
 bench:
 	bash scripts/bench.sh

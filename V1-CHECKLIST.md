@@ -21,7 +21,7 @@ Ship `v1.0.0` when these are done with evidence (docs, tests, or release artifac
 
 - [ ] Benchmarks reproducible (`make bench`); charts not placeholders
 - [ ] Overflow / reload / FFI / cross-lang results summarized
-- [ ] `polyglot doctor` / `validate` in first-run docs
+- [x] `polyglot doctor` / `validate` in first-run docs
 - [ ] Panic recover on `//export` paths covered by tests
 
 ## Documentation

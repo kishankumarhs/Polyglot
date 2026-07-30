@@ -122,8 +122,17 @@
     },
     {
       "name": "logger_create_from_config_file",
-      "doc": "Create a logger from a config file path (YAML or JSON).\nIf path is empty, checks POLYGLOT_CONFIG_PATH environment variable.\nIf neither found, uses defaults unless POLYLOG_STRICT=1 (then errors).\nReturns handle on success, NULL on failure.",
-      "args": [{ "name": "config_path", "type": "string" }],
+      "doc": "Create a logger from a config file path (YAML or JSON).\nIf path is empty, resolves via POLYGLOT_CONFIG / cwd / parent walk (stops at .git).\nUses defaults unless POLYLOG_STRICT=1 (then errors).\nReturns handle on success, NULL on failure.",
+      "args": [{ "name": "config_path", "type": "string", "nullable": true }],
+      "returns": "handle"
+    },
+    {
+      "name": "logger_create_from_config_file_with_overrides",
+      "doc": "Create a logger from discovered/explicit config file plus sparse JSON overrides.\nConstructor/options overlay wins for present keys. Empty path uses POLYGLOT_CONFIG then cwd/parent walk.\nPrints startup diagnostics to stderr unless POLYGLOT_QUIET=1.\nReturns handle on success, NULL on failure.",
+      "args": [
+        { "name": "config_path", "type": "string", "nullable": true },
+        { "name": "overlay_json", "type": "string", "nullable": true }
+      ],
       "returns": "handle"
     }
   ]

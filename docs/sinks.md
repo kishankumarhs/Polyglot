@@ -21,7 +21,25 @@ Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAge
 
 ## HTTP
 
-Buffers up to `batch_size`, also flushes on `flush_interval_ms` and on `flush` / `close`. POSTs NDJSON; keeps the batch until a 2xx. Long outages cap the buffer (`batch_size × 20`) and increment `sink_dropped`.
+Buffers up to `batch_size`, also flushes on `flush_interval_ms` and on `flush` / `close`. A batch is sent when **any** of these happens: the buffer reaches `batch_size`, the flush interval elapses, or you call `flush` / `close`. With small traffic and `flush_interval_ms: 500`, logs can take up to 500ms to appear — that is expected, not a stuck sink.
+
+POSTs **NDJSON** (newline-delimited JSON objects), not a JSON array. `Content-Type: application/x-ndjson`. Keeps the batch until a 2xx. Long outages cap the buffer (`batch_size × 20`) and increment `sink_dropped`.
+
+Wire format example:
+
+```http
+POST /v1/logs HTTP/1.1
+Content-Type: application/x-ndjson
+
+{"timestamp":"…","level":"info","message":"a","service_name":"payments-api"}
+{"timestamp":"…","level":"info","message":"b","service_name":"payments-api"}
+```
+
+```bash
+curl -v -H 'Content-Type: application/x-ndjson' \
+  --data-binary $'{"message":"ping","service_name":"curl"}\n' \
+  "http://localhost:9999/v1/logs"
+```
 
 ```json
 {
@@ -43,7 +61,7 @@ Buffers up to `batch_size`, also flushes on `flush_interval_ms` and on `flush` /
 }
 ```
 
-URL must be `http`/`https` with a host. Put tokens in env/secrets, not committed config.
+URL must be `http`/`https` with a host. Put tokens in env/secrets, not committed config. In Node/.NET options the same fields use camelCase (`batchSize`, `flushIntervalMs`).
 
 ## Loki / Grafana
 

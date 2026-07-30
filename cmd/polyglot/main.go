@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"polyglot/internal/logger"
@@ -41,51 +42,41 @@ Usage:
   polyglot validate [--config path]
   polyglot version
 
-doctor   Resolves config, validates schema, prints sink summary, optional HTTP probe.
+doctor   Resolves config (POLYGLOT_CONFIG → cwd → parents, stop at .git),
+         validates schema, prints checklist, optional HTTP probe.
 validate Parses and validates a config file (strict).
 `)
 }
 
-func configPath(args []string) string {
+func flagConfig(args []string) string {
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--config" && i+1 < len(args) {
 			return args[i+1]
-		}
-	}
-	if p := os.Getenv("POLYGLOT_CONFIG_PATH"); p != "" {
-		return p
-	}
-	if p := os.Getenv("POLYGLOT_CONFIG_FILE"); p != "" {
-		return p
-	}
-	for _, name := range []string{"polyglot.yaml", "polyglot.yml", "polyglot.json"} {
-		if _, err := os.Stat(name); err == nil {
-			return name
 		}
 	}
 	return ""
 }
 
 func runValidate(args []string) int {
-	path := configPath(args)
-	if path == "" {
-		fmt.Fprintln(os.Stderr, "no config path found (pass --config or set POLYGLOT_CONFIG_PATH)")
+	_ = os.Setenv("POLYLOG_STRICT", "1")
+	_ = os.Setenv("POLYGLOT_QUIET", "1")
+	resolve := logger.ResolveConfigPath(flagConfig(args))
+	if resolve.Path == "" {
+		fmt.Fprintln(os.Stderr, "no config path found (pass --config or set POLYGLOT_CONFIG)")
 		return 1
 	}
-	_ = os.Setenv("POLYLOG_STRICT", "1")
-	cfg, err := logger.LoadConfigFromFile(path)
+	cfg, err := logger.LoadConfigFromFile(resolve.Path)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "validate failed: %v\n", err)
 		return 1
 	}
-	fmt.Printf("OK %s\n", path)
+	fmt.Printf("OK %s\n", resolve.Path)
 	fmt.Printf("  service=%s level=%s stdout=%v format=%s\n", cfg.Service, cfg.Level, cfg.Stdout, cfg.StdoutFormat)
 	fmt.Printf("  file=%v http=%v loki=%v async=%v\n", cfg.FileEnabled(), cfg.HTTPEnabled(), cfg.LokiEnabled(), cfg.Async)
 	return 0
 }
 
 func runDoctor(args []string) int {
-	path := configPath(args)
 	probe := false
 	for _, a := range args {
 		if a == "--probe-http" {
@@ -93,81 +84,119 @@ func runDoctor(args []string) int {
 		}
 	}
 
-	fmt.Println("Polyglot doctor")
-	fmt.Printf("  version: %s (abi %d)\n", logger.Version, logger.ABIVersion)
+	_ = os.Setenv("POLYGLOT_QUIET", "1") // avoid double diagnostics from create path
 
-	if path == "" {
-		fmt.Println("  config: (none found — defaults would be used unless POLYLOG_STRICT=1)")
+	fmt.Println("polyglot doctor")
+	fmt.Printf("Version %s (abi %d)\n\n", logger.Version, logger.ABIVersion)
+
+	resolve := logger.ResolveConfigPath(flagConfig(args))
+	ok := true
+
+	if resolve.Path == "" {
+		fmt.Println("✗ Config found")
+		if len(resolve.Searched) > 0 {
+			stop := ""
+			if resolve.StoppedAtGit {
+				stop = " (stopped at .git)"
+			}
+			fmt.Printf("  searched: %s%s\n", strings.Join(resolve.Searched, ", "), stop)
+		}
+		fmt.Println("  hint: set POLYGLOT_CONFIG or add polyglot.yaml at repo root")
+		ok = false
 	} else {
-		abs, _ := filepath.Abs(path)
-		fmt.Printf("  config: %s\n", abs)
+		fmt.Println("✓ Config found")
+		fmt.Printf("  %s\n", resolve.Path)
+		if resolve.FromEnv {
+			fmt.Printf("  via %s\n", resolve.EnvVar)
+		}
 	}
 
-	cfg, err := logger.LoadConfigFromFile(path)
+	cfg, err := logger.LoadConfigFromFile(resolve.Path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  ERROR loading config: %v\n", err)
+		fmt.Printf("✗ Parsed\n  %v\n", err)
 		return 1
 	}
 	if err := cfg.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "  ERROR validating config: %v\n", err)
+		fmt.Printf("✗ Parsed\n  %v\n", err)
 		return 1
 	}
+	fmt.Println("✓ Parsed")
+	fmt.Printf("  service=%s level=%s\n", cfg.Service, cfg.Level)
 
-	fmt.Printf("  service: %s\n", cfg.Service)
-	fmt.Printf("  level: %s\n", cfg.Level)
-	fmt.Printf("  sinks: stdout=%v file=%v http=%v loki=%v\n", cfg.Stdout, cfg.FileEnabled(), cfg.HTTPEnabled(), cfg.LokiEnabled())
-	if cfg.Caller {
-		fmt.Println("  caller: enabled")
-	}
-	if cfg.Sampling != nil && cfg.Sampling.Enabled {
-		fmt.Printf("  sampling: initial=%d thereafter=%d\n", cfg.Sampling.Initial, cfg.Sampling.Thereafter)
+	if cfg.HTTPEnabled() {
+		if probe {
+			if err := probeURL(cfg.HTTP.URL); err != nil {
+				fmt.Printf("✗ HTTP sink reachable\n  %v\n", err)
+				ok = false
+			} else {
+				fmt.Println("✓ HTTP sink reachable")
+				fmt.Printf("  %s (POST may still require auth)\n", cfg.HTTP.URL)
+			}
+		} else {
+			fmt.Println("· HTTP sink configured (pass --probe-http to check reachability)")
+			fmt.Printf("  %s batch_size=%d flush_interval_ms=%d\n",
+				cfg.HTTP.URL, cfg.HTTP.BatchSize, cfg.HTTP.FlushIntervalMS)
+		}
 	}
 
-	// Native library discovery hints for binding users.
+	if cfg.FileEnabled() {
+		if err := checkFileWritable(cfg.File.Path); err != nil {
+			fmt.Printf("✗ Log file writable\n  %v\n", err)
+			ok = false
+		} else {
+			fmt.Println("✓ Log file writable")
+			fmt.Printf("  %s\n", cfg.File.Path)
+		}
+	}
+
 	fmt.Println("  native lib search:")
+	foundNative := false
 	for _, c := range nativeCandidates() {
 		if st, err := os.Stat(c); err == nil && !st.IsDir() {
 			fmt.Printf("    FOUND %s\n", c)
-		} else {
-			fmt.Printf("    miss  %s\n", c)
+			foundNative = true
 		}
 	}
-
-	if probe {
-		if cfg.HTTPEnabled() {
-			if err := probeURL(cfg.HTTP.URL); err != nil {
-				fmt.Fprintf(os.Stderr, "  http probe FAILED: %v\n", err)
-			} else {
-				fmt.Println("  http probe: reachable (POST may still require auth)")
-			}
-		}
-		if cfg.LokiEnabled() {
-			if err := probeURL(cfg.Loki.URL); err != nil {
-				fmt.Fprintf(os.Stderr, "  loki probe FAILED: %v\n", err)
-			} else {
-				fmt.Println("  loki probe: reachable (push may still require auth)")
-			}
-		}
+	if !foundNative {
+		fmt.Println("    (none in common paths — bindings bundle natives in published packages)")
 	}
 
-	// Smoke create + one log + close.
 	log, err := logger.New(cfg)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  ERROR creating logger: %v\n", err)
+		fmt.Printf("✗ Runtime initialized\n  %v\n", err)
 		return 1
 	}
 	_ = log.Info("polyglot doctor ok", map[string]any{"doctor": true})
 	if err := log.Flush(); err != nil {
-		fmt.Fprintf(os.Stderr, "  WARN flush: %v\n", err)
+		fmt.Printf("  WARN flush: %v\n", err)
 	}
 	st := log.Stats()
 	b, _ := json.Marshal(st)
 	fmt.Printf("  stats: %s\n", string(b))
 	if err := log.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "  WARN close: %v\n", err)
+		fmt.Printf("  WARN close: %v\n", err)
 	}
-	fmt.Println("doctor: OK")
-	return 0
+	fmt.Println("✓ Runtime initialized")
+
+	fmt.Println()
+	if ok {
+		fmt.Println("doctor: OK")
+		return 0
+	}
+	fmt.Println("doctor: issues found")
+	return 1
+}
+
+func checkFileWritable(path string) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return err
+	}
+	return f.Close()
 }
 
 func nativeCandidates() []string {

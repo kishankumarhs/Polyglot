@@ -4,8 +4,11 @@ A shared logging core written in Go, with thin bindings for Node, Python, and .N
 
 ## Install
 
+Current publish line is **0.3.x** (not 1.0). Check the registry for the latest patch (`npm view @polyglot-logger/node version`, PyPI, NuGet).
+
 ```bash
 npm install @polyglot-logger/node
+# or: npm install @polyglot-logger/node@^0.3.0
 pip install polyglot-logger
 dotnet add package Polyglot.Logger
 ```
@@ -36,7 +39,7 @@ using var log = new Logger(new LoggerOptions { Service = "api", Stdout = true })
 log.Info("hello", new() { ["user_id"] = 1 });
 ```
 
-Or drop a config file next to your app:
+Or drop `polyglot.yaml` at the git repo root (discovered from any app cwd):
 
 ```yaml
 # polyglot.yaml
@@ -45,7 +48,7 @@ level: info
 stdout: true
 ```
 
-See [first log](docs/first-log.md) for a full walkthrough.
+Side-by-side APIs: [sdk.md](docs/sdk.md) · First log: [first-log.md](docs/first-log.md) · Stuck? `go run ./cmd/polyglot doctor`
 
 ## Why use it?
 
@@ -73,7 +76,9 @@ make build-native && make bench
 
 ## Documentation
 
+- [SDK comparison](docs/sdk.md)
 - [First log](docs/first-log.md)
+- [Zero-config](docs/zero-config.md) · [Monorepo](docs/monorepo.md)
 - [User guide](docs/user-guide.md)
 - [Configuration](docs/configuration.md)
 - [Sinks & Loki](docs/sinks.md)

@@ -52,7 +52,7 @@ file:
   max_size_mb: 100
 ```
 
-Or set options in the constructor. Env overrides: `POLYGLOT_CONFIG_PATH`, `POLYGLOT_CONFIG_FILE`.
+Or set options in the constructor (they override the file). Env: `POLYGLOT_CONFIG` (aliases `POLYGLOT_CONFIG_PATH` / `POLYGLOT_CONFIG_FILE`). Discovery walks cwd → parents and stops at `.git`. See [sdk.md](../sdk.md) · [zero-config.md](../zero-config.md).
 
 HTTP-only:
 

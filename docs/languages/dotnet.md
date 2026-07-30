@@ -52,7 +52,7 @@ file:
   path: app.log
 ```
 
-Env: `POLYGLOT_CONFIG_PATH`, `POLYGLOT_CONFIG_FILE`.
+Env: `POLYGLOT_CONFIG` (aliases `POLYGLOT_CONFIG_PATH` / `POLYGLOT_CONFIG_FILE`). Discovery walks cwd → parents and stops at `.git`. See [sdk.md](../sdk.md) · [zero-config.md](../zero-config.md).
 
 HTTP-only:
 

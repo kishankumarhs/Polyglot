@@ -20,6 +20,7 @@ Generated from `api/abi.json`. Each function must have a matching
 | `logger_last_error` | `string` | handle handle |
 | `logger_free_string` | `void` | string s |
 | `logger_create_from_config_file` | `handle` | string config_path |
+| `logger_create_from_config_file_with_overrides` | `handle` | string config_path, string overlay_json |
 
 After editing `api/abi.json` or `native/export.go`, run:
 

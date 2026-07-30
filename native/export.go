@@ -442,9 +442,14 @@ func logger_free_string(s *C.char) {
 
 //export logger_create_from_config_file
 func logger_create_from_config_file(configPath *C.char) (result unsafe.Pointer) {
+	return logger_create_from_config_file_with_overrides(configPath, nil)
+}
+
+//export logger_create_from_config_file_with_overrides
+func logger_create_from_config_file_with_overrides(configPath *C.char, overlayJSON *C.char) (result unsafe.Pointer) {
 	defer func() {
 		if r := recover(); r != nil {
-			err := fmt.Errorf("panic in logger_create_from_config_file: %v", r)
+			err := fmt.Errorf("panic in logger_create_from_config_file_with_overrides: %v", r)
 			fmt.Fprintf(os.Stderr, "[polyglot-logger] %v\n", err)
 			setGlobalErr(err)
 			result = nil
@@ -452,7 +457,8 @@ func logger_create_from_config_file(configPath *C.char) (result unsafe.Pointer) 
 	}()
 
 	path := goString(configPath)
-	cfg, err := core.LoadConfigFromFile(path)
+	overlay := []byte(goString(overlayJSON))
+	cfg, _, err := core.CreateConfigFromFileWithOverrides(path, overlay)
 	if err != nil {
 		setGlobalErr(err)
 		return nil

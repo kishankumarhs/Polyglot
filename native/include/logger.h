@@ -100,11 +100,19 @@ LOGGER_API void logger_free_string(char* s);
 
 /*
  * Create a logger from a config file path (YAML or JSON).
- * If path is empty, checks POLYGLOT_CONFIG_PATH environment variable.
- * If neither found, uses defaults unless POLYLOG_STRICT=1 (then errors).
+ * If path is empty, resolves via POLYGLOT_CONFIG / cwd / parent walk (stops at .git).
+ * Uses defaults unless POLYLOG_STRICT=1 (then errors).
  * Returns handle on success, NULL on failure.
  */
 LOGGER_API logger_handle logger_create_from_config_file(const char* config_path);
+
+/*
+ * Create a logger from discovered/explicit config file plus sparse JSON overrides.
+ * Constructor/options overlay wins for present keys. Empty path uses POLYGLOT_CONFIG then cwd/parent walk.
+ * Prints startup diagnostics to stderr unless POLYGLOT_QUIET=1.
+ * Returns handle on success, NULL on failure.
+ */
+LOGGER_API logger_handle logger_create_from_config_file_with_overrides(const char* config_path, const char* overlay_json);
 
 #ifdef __cplusplus
 }

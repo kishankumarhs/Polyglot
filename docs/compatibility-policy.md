@@ -13,7 +13,7 @@ Bump ABI only when the C API breaks. Prefer additive APIs (`logger_with`, new op
 
 **0.3.x today:** bindings load the shared lib from package `bin/` / `native/` (or `POLYGLOT_LOGGER_LIB`). Smoke tests assert ABI `== 1`, but a mismatch is not refused at load — wrong symbols usually fail on first call.
 
-**1.0 target:** each binding embeds `EXPECTED_ABI = 1`, calls `logger_abi_version()` on first load, and throws if it disagrees. Optional escape hatch: `POLYLOG_ALLOW_ABI_MISMATCH=1` for experts.
+**Future 1.0 target (not published yet):** each binding embeds `EXPECTED_ABI = 1`, calls `logger_abi_version()` on first load, and throws if it disagrees. Optional escape hatch: `POLYLOG_ALLOW_ABI_MISMATCH=1` for experts. Until then, install **0.3.x** packages only.
 
 ## Binding semver
 

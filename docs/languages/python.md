@@ -4,7 +4,6 @@ Package: [`polyglot-logger`](https://pypi.org/project/polyglot-logger/) · repo:
 
 ```bash
 pip install polyglot-logger
-# YAML config helpers: pip install polyglot-logger[yaml]
 ```
 
 From this monorepo:
@@ -52,7 +51,7 @@ file:
   path: /var/log/payments.log
 ```
 
-Env: `POLYGLOT_CONFIG_PATH`, `POLYGLOT_CONFIG_FILE`.
+Env: `POLYGLOT_CONFIG` (aliases `POLYGLOT_CONFIG_PATH` / `POLYGLOT_CONFIG_FILE`). Discovery walks cwd → parents and stops at `.git`. See [sdk.md](../sdk.md) · [zero-config.md](../zero-config.md).
 
 HTTP-only:
 

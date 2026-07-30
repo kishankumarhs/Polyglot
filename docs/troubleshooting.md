@@ -68,3 +68,19 @@ Returns an error. Drop your reference after close.
 ## Import works, first `Logger()` fails
 
 Bindings load the native lib lazily. Build or set `POLYGLOT_LOGGER_LIB` before create.
+
+## Config not loading / wrong sinks
+
+Constructors resolve config as `POLYGLOT_CONFIG` → cwd → parent dirs (stop at `.git`). Put `polyglot.yaml` at the **git repo root**, or set `POLYGLOT_CONFIG`. Watch startup diagnostics on stderr (`POLYGLOT_QUIET=1` to silence). Run `go run ./cmd/polyglot doctor` for a checklist.
+
+## Port already in use / TIME_WAIT (ops)
+
+`EADDRINUSE` on 3000/8001/9999 after killing a process is a general OS/TCP issue, not Polyglot-specific. Wait for `TIME_WAIT` to clear, change the port, or use a process manager (Docker, systemd, PM2).
+
+## Connection refused right after start (ops)
+
+Give HTTP services a moment to bind before generating traffic, or hit a health endpoint first. Short `sleep` in scripts is fine; prefer readiness checks in real deployments.
+
+## Curl to HTTP sink looks broken (ops)
+
+Send **NDJSON** (`Content-Type: application/x-ndjson`), one JSON object per line ending with `\n` — not a JSON array. See [sinks.md](sinks.md).
