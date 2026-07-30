@@ -69,6 +69,18 @@ def parse_ffi(text: str) -> dict[str, float]:
     return out
 
 
+def parse_binding_ops(text: str, polyglot_key: str, competitor_key: str, competitor_prefix: str) -> dict[str, float]:
+    """Parse polyglot_* / competitor_* lines from python or dotnet benches."""
+    out: dict[str, float] = {}
+    for line in text.splitlines():
+        m = re.search(r"^(polyglot_sync_file|" + competitor_prefix + r")\s+.*?ops/s=([\d.]+)", line)
+        if not m:
+            continue
+        label = polyglot_key if m.group(1).startswith("polyglot") else competitor_key
+        out[label] = float(m.group(2))
+    return out
+
+
 def parse_scale_csv(path: Path) -> dict[str, float]:
     if not path.exists():
         return {}
@@ -85,12 +97,18 @@ def main() -> None:
     go = (RES / "go.txt").read_text(encoding="utf-8") if (RES / "go.txt").exists() else ""
     node = (RES / "node.txt").read_text(encoding="utf-8") if (RES / "node.txt").exists() else ""
     ffi = (RES / "ffi.txt").read_text(encoding="utf-8") if (RES / "ffi.txt").exists() else ""
+    py = (RES / "python.txt").read_text(encoding="utf-8") if (RES / "python.txt").exists() else ""
+    dn = (RES / "dotnet.txt").read_text(encoding="utf-8") if (RES / "dotnet.txt").exists() else ""
 
     sync_ops = parse_go_ops(go)
     lat = parse_go_p99(go)
     n_ops, n_p99 = parse_node(node)
     for k, v in n_p99.items():
         lat[k] = v
+
+    py_ops = parse_binding_ops(py, "Polyglot (Python)", "stdlib logging", "stdlib_sync_file")
+    dn_ops = parse_binding_ops(dn, "Polyglot (.NET)", "Serilog", "serilog_sync_file")
+    bindings_ops = {**py_ops, **dn_ops}
 
     summary = {
         "sync_file_ops": sync_ops or {"Polyglot": 0, "Zap": 0, "Zerolog": 0},
@@ -99,6 +117,7 @@ def main() -> None:
         or {"1": 0, "2": 0, "4": 0, "8": 0, "16": 0, "32": 0, "64": 0},
         "ffi_ns": parse_ffi(ffi) or {"FFI only": 0, "Full sync log": 0},
         "node_ops": n_ops,
+        "bindings_ops": bindings_ops,
     }
     (RES / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {RES / 'summary.json'}")

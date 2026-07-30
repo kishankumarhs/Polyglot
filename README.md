@@ -63,6 +63,8 @@ On a Windows laptop (i7-1355U), Go sync file throughput is in the same ballpark 
 
 ![FFI](bench/results/ffi.svg)
 
+![Python / .NET](bench/results/bindings.svg)
+
 Methodology and how to regenerate: [bench/README.md](bench/README.md).
 
 ```bash

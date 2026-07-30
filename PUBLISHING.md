@@ -10,15 +10,19 @@ Platforms: Linux x86_64, Windows x86_64, macOS arm64. See [compatibility.md](doc
 
 Secrets (Settings → Actions): `NPM_TOKEN`, `PYPI_TOKEN`, `NUGET_TOKEN`.
 
-Bump versions in:
+**Versioning:** the git tag is source of truth. On release, CI runs `scripts/set-release-version.sh` so binding manifests and the Go `Version` const match the tag (`v0.3.1` → `0.3.1`) before `npm pack` / `python -m build` / `dotnet pack`. You do **not** need a prior commit of version bumps for publish to work.
 
-- `bindings/node/package.json`
-- `bindings/python/pyproject.toml`
-- `bindings/dotnet/Polyglot.Logger/Polyglot.Logger.csproj`
+This avoids republishing a stale submodule version (e.g. npm `403` when tagging a new release while `package.json` still said `0.3.0`).
 
 ```bash
-git tag v0.3.0
-git push origin v0.3.0
+git tag v0.3.1
+git push origin v0.3.1
+```
+
+Optional local sync (docs / submodule pins):
+
+```bash
+bash scripts/set-release-version.sh 0.3.1
 ```
 
 Install binding + native from the same tag.

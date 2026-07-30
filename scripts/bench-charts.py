@@ -38,6 +38,12 @@ def load_summary() -> dict:
             "64": 140000,
         },
         "ffi_ns": {"FFI only": 3200, "Full sync log": 24000},
+        "bindings_ops": {
+            "Polyglot (Python)": 25000,
+            "stdlib logging": 8000,
+            "Polyglot (.NET)": 30000,
+            "Serilog": 18000,
+        },
         "note": "placeholder — run make bench to replace",
     }
 
@@ -343,6 +349,17 @@ def main() -> None:
     bar_chart(OUT / "latency", "P99 latency (lower is better)", data["latency_p99_ns"], "nanoseconds", "#dc2626")
     line_chart(OUT / "scale", "Polyglot scale (writers → ops/s)", data.get("scale_ops") or {"1": 0, "2": 0}, "writers", "ops/s")
     bar_chart(OUT / "ffi", "FFI crossing vs full sync log", data["ffi_ns"], "nanoseconds (mean)", "#059669")
+    bindings = data.get("bindings_ops") or {}
+    if bindings and max(bindings.values(), default=0) > 0:
+        bar_chart(
+            OUT / "bindings",
+            "Python / .NET sync file (ops/s)",
+            bindings,
+            "ops/s",
+            "#7c3aed",
+        )
+    else:
+        no_data(OUT / "bindings", "Python / .NET sync file (ops/s)", "no data — run make bench")
     print(f"wrote charts under {OUT} (.svg + .png)")
 
 

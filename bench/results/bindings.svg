@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="100%" height="100%" fill="#fafafa"/>
+<text x="360.0" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">Python / .NET sync file (ops/s)</text>
+<text x="360.0" y="344" text-anchor="middle" font-size="12" fill="#666">ops/s</text>
+<rect x="68.0" y="50.0" width="104.0" height="240.0" fill="#7c3aed" rx="4"/>
+<text x="120.0" y="312" text-anchor="middle" font-size="11" fill="#333">Polyglot (Python)</text>
+<text x="120.0" y="44.0" text-anchor="middle" font-size="11" fill="#111">13.9k</text>
+<rect x="228.0" y="125.1" width="104.0" height="164.9" fill="#7c3aed" rx="4"/>
+<text x="280.0" y="312" text-anchor="middle" font-size="11" fill="#333">stdlib logging</text>
+<text x="280.0" y="119.1" text-anchor="middle" font-size="11" fill="#111">9.5k</text>
+<rect x="388.0" y="189.8" width="104.0" height="100.2" fill="#7c3aed" rx="4"/>
+<text x="440.0" y="312" text-anchor="middle" font-size="11" fill="#333">Polyglot (.NET)</text>
+<text x="440.0" y="183.8" text-anchor="middle" font-size="11" fill="#111">5.8k</text>
+<rect x="548.0" y="133.1" width="104.0" height="156.9" fill="#7c3aed" rx="4"/>
+<text x="600.0" y="312" text-anchor="middle" font-size="11" fill="#333">Serilog</text>
+<text x="600.0" y="127.1" text-anchor="middle" font-size="11" fill="#111">9.1k</text>
+</svg>
