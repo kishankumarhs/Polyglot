@@ -2,7 +2,7 @@
 
 ## Contract
 
-[`api/abi.json`](../api/abi.json) is the single source of truth for the public C API. Do not hand-edit generated files marked `DO NOT EDIT`.
+[`api/abi.json`](../api/abi.json) defines the public C API. Do not hand-edit generated files marked `DO NOT EDIT`.
 
 ## Generate
 
@@ -59,5 +59,7 @@ Levels are integers (`LOGGER_TRACE` … `LOGGER_FATAL`). Return codes: `0` succe
 - **ABI version** bumps only when the C surface is incompatible (removed/changed signatures).
 - Prefer additive APIs (`logger_create_v2`, new functions) over breaking changes.
 - Library **version** string can bump for behavior/bugfix without an ABI bump.
+- **Binding ↔ core mismatch behavior** (today vs 1.0 fail-fast): [compatibility-policy.md](compatibility-policy.md).
+- **Supported matrix**: [compatibility.md](compatibility.md).
 
 See also [`api/README.md`](../api/README.md).

@@ -1,8 +1,6 @@
-# Configuration reference
+# Configuration
 
-Configuration is a JSON object passed to `logger_create_v1` (or built by language bindings). Preferred shape is the **nested** schema below. Legacy flat keys still parse for older configs.
-
-## Full schema (nested)
+JSON object passed to `logger_create_v1` (or built by bindings). Nested schema below is preferred; legacy flat keys still parse.
 
 ```json
 {
@@ -26,9 +24,7 @@ Configuration is a JSON object passed to `logger_create_v1` (or built by languag
     "enabled": true,
     "url": "https://collector.example/v1/logs",
     "timeout_ms": 5000,
-    "headers": {
-      "Authorization": "Bearer <token>"
-    },
+    "headers": { "Authorization": "Bearer <token>" },
     "batch_size": 50,
     "flush_interval_ms": 1000
   },
@@ -43,13 +39,11 @@ Configuration is a JSON object passed to `logger_create_v1` (or built by languag
   "queueSize": 10000,
   "overflow": "drop_newest",
   "sampling": { "enabled": false, "initial": 100, "thereafter": 100 },
-  "fields": {
-    "region": "ap-south-1"
-  }
+  "fields": { "region": "ap-south-1" }
 }
 ```
 
-At least one sink must be enabled (`stdout`, `file.enabled`, or `http.enabled`). Validation fails if none are.
+At least one of `stdout`, `file.enabled`, or `http.enabled` / `loki.enabled` must be on.
 
 ## Field reference
 
@@ -174,4 +168,4 @@ Replace the bearer token from the environment or a secret store — do not commi
 | `async` on/off | No | Yes |
 | `queueSize` | No | Yes |
 
-See also [User guide](user-guide.md) and [Sinks](sinks.md).
+See [user-guide.md](user-guide.md) · [sinks.md](sinks.md).

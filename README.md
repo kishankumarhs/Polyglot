@@ -1,98 +1,96 @@
 # Polyglot
 
-Cross-language structured logger: a **Go core** compiled to a native shared library (`.so` / `.dll` / `.dylib`), plus idiomatic bindings for **Python**, **Node.js/TypeScript**, and **.NET**.
+A shared logging core written in Go, with thin bindings for Node, Python, and .NET. Same `polyglot.yaml`, same JSON shape, same sinks — whether you're in one language or four.
 
-## Install (app developers)
-
-Prefer registry packages — **no Go or CGO required**:
+## Install
 
 ```bash
-# Node.js / TypeScript
 npm install @polyglot-logger/node
-
-# Python
 pip install polyglot-logger
-
-# .NET
 dotnet add package Polyglot.Logger
 ```
 
-Drop a [`polyglot.yaml`](polyglot.yaml) in your project root for [zero-config](docs/zero-config.md) setup:
+No Go/CGO required. Native binaries ship inside the packages (Linux, Windows, macOS arm64).
+
+## Quick example
+
+```js
+import { Logger } from "@polyglot-logger/node";
+
+const log = new Logger({ service: "api", stdout: true });
+log.info("hello", { user_id: 1 });
+log.close();
+```
+
+```python
+from polyglot_logger import Logger
+
+with Logger("api", stdout=True) as log:
+    log.info("hello", user_id=1)
+```
+
+```csharp
+using Polyglot.Logger;
+
+using var log = new Logger(new LoggerOptions { Service = "api", Stdout = true });
+log.Info("hello", new() { ["user_id"] = 1 });
+```
+
+Or drop a config file next to your app:
 
 ```yaml
-service: my-api
-environment: prod
+# polyglot.yaml
+service: api
 level: info
 stdout: true
-stdout_format: text   # or json
-caller: true
 ```
+
+See [first log](docs/first-log.md) for a full walkthrough.
+
+## Why use it?
+
+If you only write Go, use Zap. If you only write Node, use Pino. Polyglot is for stacks that mix languages and want one ops model — shared config, Loki/HTTP shipping, async queue, overflow policy, hot reload — without reimplementing that three times.
+
+## Benchmarks
+
+On a Windows laptop (i7-1355U), Go sync file throughput is in the same ballpark as Zap (~50k vs ~46k ops/s in the last local run). Node async sits behind Pino; FFI crossing is about 1.6 µs and is not the bottleneck.
+
+Charts and methodology: [bench/README.md](bench/README.md). Regenerate with:
 
 ```bash
-# Diagnose install / config / sinks
-go run ./cmd/polyglot doctor --config polyglot.yaml
+make build-native && make bench
 ```
-
-Packages: [@polyglot-logger/node](https://github.com/kishankumarhs/polyglot-node) · [polyglot-logger](https://github.com/kishankumarhs/polyglot-py) · [Polyglot.Logger](https://github.com/kishankumarhs/polyglot-csharp)
-
-## Features
-
-- Structured JSON logs with optional **text** console format for local dev
-- Levels `trace` … `fatal` (`fatal` does not exit the process)
-- **Child loggers** via `With(fields)` / `logger_with` (safe for concurrent request scopes)
-- Context helpers for `trace_id` / `span_id`
-- Async queue with overflow + optional **sampling**
-- Sinks: stdout, rotating file (**gzip** backups), HTTP NDJSON, **native Loki push**
-- Hot reload, stats, Prometheus-style `MetricsText()`, `polyglot doctor` / `validate`
-- Stable C ABI v1; panics in exports are recovered (host process is not aborted)
 
 ## Documentation
 
-| Guide | Description |
-| ----- | ----------- |
-| [Zero-config](docs/zero-config.md) | `polyglot.yaml` auto-discovery |
-| [Getting started](docs/getting-started.md) | First log + contributor build |
-| [User guide](docs/user-guide.md) | Levels, fields, async, stats |
-| [Configuration](docs/configuration.md) | Full schema (`strict`, `sampling`, `loki`, …) |
-| [Sinks & Loki/Grafana](docs/sinks.md) | HTTP, Loki, Vector recipe |
-| [Repositories](docs/REPOSITORIES.md) | Core + binding submodule layout |
-| [Submodule workflow](docs/SUBMODULE-WORKFLOW.md) | Contributor clone (`--recurse-submodules`) |
+- [First log](docs/first-log.md)
+- [User guide](docs/user-guide.md)
+- [Configuration](docs/configuration.md)
+- [Sinks & Loki](docs/sinks.md)
+- [Compatibility](docs/compatibility.md)
+- [Migrate from Pino](docs/migrate-from-pino.md) · [Zap](docs/migrate-from-zap.md) · [Serilog](docs/migrate-from-serilog.md) · [Python logging](docs/migrate-from-python-logging.md)
+- Full index: [docs/](docs/README.md)
 
-## Contributor quick start
+## Supported languages
+
+| Language | Package |
+| --- | --- |
+| Node.js | [@polyglot-logger/node](https://www.npmjs.com/package/@polyglot-logger/node) |
+| Python | [polyglot-logger](https://pypi.org/project/polyglot-logger/) |
+| .NET | [Polyglot.Logger](https://www.nuget.org/packages/Polyglot.Logger) |
+| Go | `polyglot/internal/logger` (in-repo; no shared lib required) |
+
+## Contributing
 
 ```bash
-git clone --recurse-submodules https://github.com/kishankumarhs/logger.git
-cd logger
+git clone --recurse-submodules https://github.com/kishankumarhs/Polyglot.git
+cd Polyglot
 bash scripts/check-submodules.sh
-make build-native          # needs Go + CGO + gcc/clang/MinGW
-go test ./internal/logger -race
-go run ./cmd/polyglot doctor
+make build-native
+go test ./internal/logger ./native -count=1
 ```
 
-If bindings look empty after a plain `git clone`, run:
-
-```bash
-git submodule update --init --recursive
-```
-
-Set `POLYGLOT_LOGGER_LIB` only when developing against a locally built native library.
-
-### Central logs (Loki)
-
-```json
-{
-  "service": "my-api",
-  "stdout": false,
-  "loki": {
-    "enabled": true,
-    "url": "http://loki:3100/loki/api/v1/push",
-    "batch_size": 50,
-    "flush_interval_ms": 1000
-  }
-}
-```
-
-Or keep the HTTP NDJSON sink and use the [Vector recipe](docs/sinks.md#vectoralloy-ndjson--loki).
+Details: [CONTRIBUTING.md](CONTRIBUTING.md) · [getting started](docs/getting-started.md)
 
 ## License
 

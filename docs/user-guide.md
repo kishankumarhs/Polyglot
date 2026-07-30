@@ -1,157 +1,90 @@
 # User guide
 
-How to use the logger day to day from any supported language. Language-specific APIs are in [languages/](languages/); this guide is language-agnostic.
+Day-to-day usage. Language APIs: [languages/](languages/).
 
-## Mental model
+## How it works
 
 ```text
 Your app  →  Logger API  →  (optional async queue)  →  sinks
                                                       ├─ stdout
                                                       ├─ rotating file
-                                                      └─ HTTP (NDJSON)
+                                                      └─ HTTP / Loki
 ```
 
-- **One Go core** owns formatting, JSON, rotation, queueing, and HTTP shipping.
-- Bindings are thin wrappers over the C ABI. They do **not** reimplement logging logic.
-- You can create **multiple logger instances** (auth, payments, workflow), each with its own config.
+Go core owns formatting, queueing, and shipping. Bindings are thin FFI wrappers. Multiple logger instances are fine (auth, payments, …).
 
-## Log levels
+## Levels
 
-| Level | Integer | Typical use |
-| ----- | ------- | ----------- |
-| `trace` | 0 | Very verbose diagnostics |
-| `debug` | 1 | Development detail |
-| `info` | 2 | Normal operations |
-| `warn` | 3 | Unexpected but recoverable |
-| `error` | 4 | Failures that need attention |
-| `fatal` | 5 | Critical failure **label only** |
+| Level | Int | Use |
+| --- | --- | --- |
+| `trace` | 0 | Verbose diagnostics |
+| `debug` | 1 | Dev detail |
+| `info` | 2 | Normal ops |
+| `warn` | 3 | Recoverable surprise |
+| `error` | 4 | Needs attention |
+| `fatal` | 5 | Label only — does not exit |
 
-Minimum level is configured with `"level": "info"` (or binding options). Messages below that level are discarded before enqueue.
+Floor: `"level": "info"`. Exit yourself if you need process death on fatal.
 
-**Important:** `fatal` does **not** exit the process. Call `os.Exit` / `process.exit` / `Environment.Exit` yourself if that is the behavior you want.
+## Fields
 
-## Structured fields
+Three layers merge on every write (later wins):
 
-Every log is one JSON object. Extra data goes in `fields`.
+1. Config fields
+2. Context (`set_fields` / `setFields` / `SetFields`)
+3. Per-call fields
 
-Three layers merge on every write:
+For request scope use `With` / `with` / `with_fields`, not a shared mutable context.
 
-1. **Config fields** — set at create / reload (`fields` in JSON config)
-2. **Context fields** — set at runtime (`set_fields` / `setFields` / `SetFields`)
-3. **Per-call fields** — passed on a single `info` / `log` call
+## Async & overflow
 
-Later layers override earlier keys with the same name.
+Default `async: true`: serialize, enqueue, return. Worker writes sinks.
 
-Typical context fields: `traceId`, `requestId`, `tenantId`, `userId`.
+| `overflow` | When full |
+| --- | --- |
+| `drop_newest` | Drop the new entry |
+| `drop_oldest` | Drop one queued, then enqueue |
+| `block` | Wait for space |
 
-```text
-config fields  →  context fields  →  per-call fields
-```
+`queueSize` and `async` are fixed at create. Level, sinks, overflow, and fields can hot-reload.
 
-## Async logging and overflow
-
-With `"async": true` (default):
-
-1. Your thread serializes the entry and pushes it onto a bounded queue.
-2. A background worker drains the queue and writes to sinks.
-3. Your call returns as soon as the entry is queued (or dropped/blocked).
-
-| `overflow` | When the queue is full |
-| ---------- | --------------------- |
-| `drop_newest` (default) | Reject the new entry; increment `dropped` |
-| `drop_oldest` | Discard one queued entry, then enqueue the new one |
-| `block` | Wait until there is space (or the logger closes) |
-
-`queueSize` and `async` are fixed at creation. Everything else (level, sinks, overflow, fields) can change via hot reload.
-
-## Flush and close
+## Flush & close
 
 | Call | Behavior |
-| ---- | -------- |
-| `flush` | Drain the async queue and sync sinks (HTTP POST pending batches, flush file buffers) |
-| `close` / `Dispose` | Stop the worker, flush, close sinks. Prefer a **single owner** |
+| --- | --- |
+| `flush` | Drain queue + sync sinks |
+| `close` / `Dispose` | Stop worker, flush, close sinks |
 
-`close` returns an error (or throws, depending on binding) if the final flush failed — for example if the HTTP collector never accepted remaining lines. Check it on shutdown.
+Check close errors on shutdown so the last HTTP batch isn't lost.
 
-Always close loggers in long-running services during graceful shutdown so the last batches leave the process.
+## Stats
 
-## Stats (delivery visibility)
-
-In async mode a successful `info()` only means “queued,” not “written to disk/collector.” Scrape stats:
-
-| Counter | Meaning |
-| ------- | ------- |
-| `queued` | Entries waiting in the async queue |
-| `dropped` | Lost at the queue (overflow policy) |
-| `flushed` | Handed to sinks |
-| `bytes_written` | Serialized bytes handed to sinks |
-| `write_errors` | Payloads where at least one sink write failed |
-| `buffered` | Lines the HTTP sink still holds (pending 2xx) |
-| `sink_dropped` | Lines discarded because the HTTP retry buffer was full |
-
-Alert on rising `dropped`, `write_errors`, or `sink_dropped` if you care about delivery.
+In async mode, `info()` means queued, not written. Useful counters: `queued`, `dropped`, `flushed`, `write_errors`, `buffered`, `sink_dropped`.
 
 ## Hot reload
 
-`reload_config` / `reloadConfig` / `ReloadConfig` applies a new JSON config:
-
-- Can change: level, stdout/file/http sinks, overflow, base fields
-- Cannot change: `async`, `queueSize` (create a new logger if you need different queue settings)
-
-Reload is safe while other threads are logging.
+Can change level, sinks, overflow, base fields. Cannot change `async` / `queueSize` — create a new logger for those.
 
 ## Thread safety
 
-- Concurrent `log` / `flush` / `stats` / `set_fields` / `reload` on one instance is safe (Node worker threads, Python threads, .NET Tasks).
-- Call `close` once from a single owner.
-- Do not use a handle after `close`.
+Concurrent log/flush/stats/set_fields/reload on one instance is fine. Close once. Don't use a handle after close.
 
-## Choosing sinks for your environment
-
-| Goal | Suggested config |
-| ---- | ---------------- |
-| Local development | `stdout: true`, file optional |
-| Single VM with disk | Rotating file (`maxSizeMB`, `maxBackups`, `maxAgeDays`) |
-| Avoid filling VM disks | `file.enabled: false`, `http.enabled: true` → central collector |
-| Grafana / Loki | HTTP → adapter or Vector/Alloy → Loki (see [sinks](sinks.md)) |
-
-## Multiple services / instances
-
-Create one logger per logical service or pipeline:
-
-```text
-auth-logger      →  service: "auth-api"
-payments-logger  →  service: "payments-api"
-```
-
-Each has independent sinks, levels, and stats.
-
-## Error model
-
-- Native ABI returns `0` on success, `-1` on failure.
-- `logger_last_error(handle)` returns a message; `NULL` handle → create/global errors.
-- Bindings raise / throw native exceptions (`LoggerError`, `LoggerException`).
-
-## Child loggers (`With`)
-
-Prefer `With` for request-scoped fields instead of mutating shared context via `set_fields`:
+## Child loggers
 
 ```go
 reqLog := root.With(map[string]any{"requestId": id})
 _ = reqLog.Info("handling", nil)
 ```
 
-ABI: `logger_with(handle, fields_json)` returns a child handle. Closing a child is a no-op — close the root.
+Closing a child only frees that handle; close the root to shut down sinks.
 
-## Context / trace helpers
+## Trace helpers
 
 ```go
 ctx := logger.ContextWithTrace(ctx, traceID, spanID)
-_ = log.LogContext(ctx, logger.LevelInfo, "ok", nil) // adds trace_id, span_id
+_ = log.LogContext(ctx, logger.LevelInfo, "ok", nil)
 ```
 
 ## Next
 
-- [Configuration reference](configuration.md)
-- [Sinks & centralized logging](sinks.md)
-- Language guides under [languages/](languages/)
+[configuration.md](configuration.md) · [sinks.md](sinks.md) · [languages/](languages/)

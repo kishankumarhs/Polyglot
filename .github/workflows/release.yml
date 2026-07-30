@@ -106,6 +106,58 @@ jobs:
           path: dist/${{ matrix.os }}/${{ matrix.arch }}/checksums.sha256
           if-no-files-found: error
 
+  bench-release:
+    name: Benchmark suite (release artifact)
+    needs: build-native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build native library
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq gcc
+          bash scripts/build-native.sh dist
+      - name: Run benches
+        env:
+          POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+          BENCH_NODE_N: "5000"
+          BENCH_NODE_ITERS: "2"
+          BENCH_OVERFLOW_N: "20000"
+          BENCH_MEM_N: "20000"
+        run: |
+          set -euo pipefail
+          mkdir -p bench/results
+          cd bench/go
+          go test -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile' \
+            -benchmem -count=3 -timeout 20m | tee ../results/go-release.txt
+          go test -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 10m | tee -a ../results/go-release.txt
+          cd ../node
+          npm install --silent
+          node bench.mjs | tee ../results/node-release.txt
+          node ffi_baseline.mjs | tee ../results/ffi-release.txt
+          cd ../..
+          cp bench/results/go-release.txt bench/results/go.txt
+          cp bench/results/node-release.txt bench/results/node.txt
+          cp bench/results/ffi-release.txt bench/results/ffi.txt
+          python scripts/bench-summarize.py
+          python scripts/bench-charts.py
+          TAG="${GITHUB_REF_NAME:-dev}"
+          {
+            echo "| ${TAG} | see artifact | see artifact | see artifact | see artifact | ubuntu-latest release runner |"
+          } >> bench/HISTORY.md
+          cp bench/HISTORY.md bench/results/HISTORY.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-release
+          path: bench/results/
+
   # Package for npm
   package-npm:
     name: Package for npm
@@ -229,7 +281,7 @@ jobs:
   # Create GitHub Release with all artifacts
   create-release:
     name: Create GitHub Release
-    needs: [package-npm, package-python, package-dotnet]
+    needs: [package-npm, package-python, package-dotnet, bench-release]
     runs-on: ubuntu-latest
     if: |
       startsWith(github.ref, 'refs/tags/')
@@ -264,6 +316,7 @@ jobs:
             release-artifacts/npm-package/*.tgz
             release-artifacts/python-packages/*
             release-artifacts/dotnet-packages/*.nupkg
+            release-artifacts/bench-release/**
           draft: false
           prerelease: false
         env:

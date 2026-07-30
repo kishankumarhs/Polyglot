@@ -43,3 +43,11 @@ bindings/dotnet/**/native/
 # Accidental build artifacts
 /codegen
 /liblogger.h
+
+# Bench outputs (keep SAMPLE.md, HISTORY.md, and committed SVG charts)
+bench/results/*.txt
+bench/results/*.pprof
+bench/results/*.csv
+bench/results/latest.md
+bench/node/node_modules/
+bench/go/*.test

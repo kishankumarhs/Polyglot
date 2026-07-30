@@ -1,8 +1,6 @@
-# Monorepo integration (Turborepo / npm workspaces)
+# Monorepo integration
 
-This repository is designed to be consumed as a **package** inside a larger monorepo that already has Python, Node, and .NET services.
-
-## Recommended layout
+Drop this repo under `packages/logger` (submodule, subtree, or copy) and point services at the bindings + a built native lib.
 
 ```text
 your-monorepo/
@@ -10,109 +8,43 @@ your-monorepo/
 │   ├── api-node/
 │   ├── worker-python/
 │   └── billing-dotnet/
-├── packages/
-│   └── logger/                 ← this repo (git submodule, subtree, or copied package)
-│       ├── bindings/node/
-│       ├── bindings/python/
-│       ├── bindings/dotnet/
-│       ├── dist/               ← built native libs (or CI artifact)
-│       └── ...
-├── package.json                ← npm workspaces
+├── packages/logger/          ← this repo
+│   ├── bindings/…
+│   └── dist/
+├── package.json
 └── turbo.json
 ```
 
-## Node / TypeScript (npm workspaces)
-
-1. Add the binding as a workspace package, for example:
+## Node
 
 ```json
 {
-  "name": "your-monorepo",
-  "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/logger/bindings/node"
-  ]
+  "workspaces": ["apps/*", "packages/logger/bindings/node"]
 }
 ```
-
-2. Depend on it from an app:
-
-```json
-{
-  "dependencies": {
-    "@polyglot-logger/node": "*"
-  }
-}
-```
-
-3. Build native once (CI or local), then point services at it:
 
 ```bash
 export POLYGLOT_LOGGER_LIB=/abs/path/to/packages/logger/dist/liblogger.so
+make -C packages/logger build-native
 ```
-
-4. Optional Turbo pipeline:
-
-```json
-{
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
-    },
-    "logger:native": {
-      "cache": false,
-      "outputs": ["dist/**"]
-    }
-  }
-}
-```
-
-Run `make build-native` (or a Turbo task that shells out to it) before Node tests that actually create a logger.
 
 ## Python
 
-Install editable from the monorepo path:
-
 ```bash
 pip install -e packages/logger/bindings/python
+export POLYGLOT_LOGGER_LIB=/abs/path/to/packages/logger/dist/liblogger.so
 ```
 
-Or publish an internal wheel that vendors `native/liblogger.so` (and siblings) under `polyglot_logger/native/`.
-
-Set `POLYGLOT_LOGGER_LIB` in service env if the packaged `native/` copy is not present.
-
 ## .NET
-
-Reference the project:
 
 ```xml
 <ProjectReference Include="..\..\packages\logger\bindings\dotnet\Polyglot.Logger\Polyglot.Logger.csproj" />
 ```
 
-Or pack an internal NuGet that includes the platform-native library next to the managed DLL. At runtime, `POLYGLOT_LOGGER_LIB` or the resolver’s `native/` candidate paths must find the shared library.
+Or pack an internal NuGet that includes the native lib.
 
-## Shared native artifact strategy
+## Shared config
 
-| Strategy | Pros | Cons |
-| -------- | ---- | ---- |
-| CI builds per OS, publish artifact | Clear, reproducible | Need matrix for linux/win/mac |
-| Commit prebuilt libs under `dist/` | Simple local bootstrap | Large binaries in git |
-| Build on each developer machine | Always matches local OS | Requires Go + C toolchain |
+Same JSON/YAML schema everywhere ([configuration.md](configuration.md)). Keep a shared `polyglot.yaml` or a small helper per language that maps env → options.
 
-Prefer CI artifacts + `POLYGLOT_LOGGER_LIB` in deployed services.
-
-## One config contract everywhere
-
-All languages use the same JSON config (see [configuration](configuration.md)). In a monorepo you can share a snippet:
-
-```text
-packages/logger/config/prod.http-only.json
-```
-
-and load it from each service, or map env vars into binding options in a small helper per language.
-
-## Codegen ownership
-
-Only the logger package maintainers should run `make codegen` / edit `api/abi.json`. App teams consume published bindings and never hand-edit `*.generated.*` files.
+Only logger maintainers should run `make codegen` or edit `api/abi.json`.

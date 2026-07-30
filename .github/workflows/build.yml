@@ -19,9 +19,9 @@ jobs:
       - name: Check formatting
         run: test -z "$(gofmt -l cmd internal native)" || (gofmt -l cmd internal native && echo "run gofmt -w" && exit 1)
       - name: Vet
-        run: go vet ./...
+        run: go vet ./cmd/... ./internal/... ./native/...
       - name: Test Go core and native layer
-        run: go test ./... -race -count=1
+        run: go test ./cmd/... ./internal/... ./native/... -race -count=1
       - name: Codegen drift check (core only)
         run: |
           go run ./cmd/codegen
@@ -136,3 +136,32 @@ jobs:
         env:
           POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
         run: dotnet test bindings/dotnet/Polyglot.Logger.Tests/Polyglot.Logger.Tests.csproj -c Release
+
+  bench-smoke:
+    needs: native
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build native library
+        run: |
+          sudo apt-get update && sudo apt-get install -y gcc
+          bash scripts/build-native.sh dist
+      - name: Bench smoke
+        env:
+          POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+        run: bash scripts/bench-smoke.sh
+      - name: Upload bench artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bench-smoke
+          path: bench/results/
+          if-no-files-found: ignore

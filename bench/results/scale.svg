@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" font-family="Segoe UI, system-ui, sans-serif">
+<rect width="100%" height="100%" fill="#fafafa"/>
+<text x="360.0" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">Polyglot scale (writers → ops/s)</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="3" points="70.0,310.0 79.8,310.0 99.5,310.0 138.9,310.0 217.6,310.0 375.1,310.0 690.0,310.0"/>
+<circle cx="70.0" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="79.8" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="99.5" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="138.9" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="217.6" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="375.1" cy="310.0" r="4" fill="#1d4ed8"/>
+<circle cx="690.0" cy="310.0" r="4" fill="#1d4ed8"/>
+<text x="360.0" y="348" text-anchor="middle" font-size="12" fill="#666">writers</text>
+<text x="16" y="180.0" text-anchor="middle" font-size="12" fill="#666" transform="rotate(-90 16 180.0)">ops/s</text>
+</svg>

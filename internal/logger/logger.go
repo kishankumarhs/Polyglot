@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"maps"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -193,7 +194,7 @@ func (l *Logger) logAt(level Level, message string, fields map[string]any, calle
 
 	var payload []byte
 	var err error
-	payload, err = json.Marshal(entry)
+	payload, err = marshalEntry(&entry)
 	if err != nil {
 		return fmt.Errorf("marshal log entry: %w", err)
 	}
@@ -552,17 +553,13 @@ func cloneAnyMap(in map[string]any) map[string]any {
 		return map[string]any{}
 	}
 	out := make(map[string]any, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
+	maps.Copy(out, in)
 	return out
 }
 
 func mergeMaps(base, overlay map[string]any) map[string]any {
 	out := cloneAnyMap(base)
-	for k, v := range overlay {
-		out[k] = v
-	}
+	maps.Copy(out, overlay)
 	if len(out) == 0 {
 		return nil
 	}

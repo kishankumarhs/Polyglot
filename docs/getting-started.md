@@ -1,98 +1,60 @@
 # Getting started
 
-This guide takes you from a clean checkout to your first structured log line in under ten minutes.
+App developers: install a registry package and skip to [first-log.md](first-log.md).
 
-## Quick start (app developers)
+This page is for people building from source.
+
+## Prerequisites
+
+- Go 1.22+
+- C toolchain (gcc / MinGW / MSVC) with CGO enabled
+- Optional: Python 3.9+, Node 18+, .NET 8+ depending on which binding you touch
+
+## Build
 
 ```bash
-npm install @polyglot-logger/node
-# or: pip install polyglot-logger
-```
-
-See the root [README](../README.md) and [zero-config](zero-config.md).
-
-## Contributor build
-
-```bash
-git clone --recurse-submodules <repo-url>
-cd logger
+git clone --recurse-submodules https://github.com/kishankumarhs/Polyglot.git
+cd Polyglot
 bash scripts/check-submodules.sh
 make build-native
 ```
 
-### Prerequisites
-
-| Tool | Notes |
-| ---- | ----- |
-| Go 1.22+ | Required to build the native library and run Go tests |
-| C toolchain | gcc (Linux/macOS), MinGW or MSVC (Windows) — CGO must be enabled |
-| Optional | Python 3.9+, Node 18+, .NET 8+ depending on which binding you use |
-
-On Windows with Scoop MinGW, ensure gcc is on `PATH` and set `CGO_ENABLED=1`.
-
-```bash
-cd logger
-make build-native
-# equivalent: go run ./cmd/codegen && bash scripts/build-native.sh dist
-```
-
-Artifacts appear in `dist/`:
+Output lands in `dist/`:
 
 | Platform | File |
-| -------- | ---- |
+| --- | --- |
 | Linux | `liblogger.so` |
 | Windows | `logger.dll` |
 | macOS | `liblogger.dylib` |
 
-Also produced: `dist/logger.h`, `dist/checksums.sha256`. Binding packages stage a copy under their own `native/` folders when the build script runs.
+Also: `dist/logger.h`, `dist/checksums.sha256`.
 
-If auto-discovery fails later, set:
+If a binding can't find the lib:
 
 ```bash
 export POLYGLOT_LOGGER_LIB=/absolute/path/to/liblogger.so   # or logger.dll / liblogger.dylib
 ```
 
-## 2. Pick a language and run an example
-
-### Python
+## Run an example
 
 ```bash
+# Python
 pip install -e bindings/python
 python examples/python/main.py
-```
 
-### Node.js
-
-```bash
+# Node
 cd bindings/node && npm install && npm run build && cd ../..
-# Windows
 POLYGLOT_LOGGER_LIB="$PWD/dist/logger.dll" node examples/node/main.mjs
-# Linux
-POLYGLOT_LOGGER_LIB="$PWD/dist/liblogger.so" node examples/node/main.mjs
-```
 
-### .NET
-
-```bash
-export POLYGLOT_LOGGER_LIB="$PWD/dist/logger.dll"   # or liblogger.so / .dylib
+# .NET
+export POLYGLOT_LOGGER_LIB="$PWD/dist/logger.dll"
 dotnet run --project examples/dotnet
-```
 
-### Go (no shared library required)
-
-```bash
+# Go (no shared library)
 go run ./cmd/logger-demo
 ```
 
-### C
-
-```bash
-# Linux
-gcc examples/c/main.c -I native/include -L dist -llogger -o examples/c/demo
-LD_LIBRARY_PATH=dist ./examples/c/demo
-```
-
-## 3. What a log line looks like
+## What a line looks like
 
 ```json
 {
@@ -105,9 +67,9 @@ LD_LIBRARY_PATH=dist ./examples/c/demo
 }
 ```
 
-## Next steps
+## Next
 
-- [User guide](user-guide.md) — levels, context fields, flush/close, stats
-- [Configuration](configuration.md) — full schema
-- [Sinks](sinks.md) — file rotation and shipping logs to a collector / Loki
-- [Monorepo](monorepo.md) — use this package inside a Turborepo workspace
+- [User guide](user-guide.md)
+- [Configuration](configuration.md)
+- [Sinks](sinks.md)
+- [Monorepo](monorepo.md)

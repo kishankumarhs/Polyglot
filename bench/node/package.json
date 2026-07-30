@@ -1,0 +1,12 @@
+{
+  "name": "polyglot-bench-node",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node bench.mjs",
+    "ffi": "node ffi_baseline.mjs"
+  },
+  "dependencies": {
+    "pino": "^9.5.0"
+  }
+}

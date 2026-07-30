@@ -1,0 +1,12 @@
+service: bench-cross
+environment: bench
+level: info
+stdout: false
+async: false
+file:
+  enabled: true
+  path: ./bench-cross.log
+  maxSizeMB: 100
+  maxBackups: 2
+  maxAgeDays: 1
+  compress: false
