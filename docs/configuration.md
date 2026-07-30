@@ -11,13 +11,16 @@ Configuration is a JSON object passed to `logger_create_v1` (or built by languag
   "environment": "prod",
   "level": "info",
   "stdout": true,
+  "stdout_format": "json",
+  "caller": false,
+  "strict": false,
   "file": {
     "enabled": true,
     "path": "./logs/app.log",
     "maxSizeMB": 100,
     "maxBackups": 10,
     "maxAgeDays": 30,
-    "compress": false
+    "compress": true
   },
   "http": {
     "enabled": true,
@@ -29,9 +32,17 @@ Configuration is a JSON object passed to `logger_create_v1` (or built by languag
     "batch_size": 50,
     "flush_interval_ms": 1000
   },
+  "loki": {
+    "enabled": false,
+    "url": "http://loki:3100/loki/api/v1/push",
+    "batch_size": 50,
+    "flush_interval_ms": 1000,
+    "labels": { "job": "workflow-service" }
+  },
   "async": true,
   "queueSize": 10000,
   "overflow": "drop_newest",
+  "sampling": { "enabled": false, "initial": 100, "thereafter": 100 },
   "fields": {
     "region": "ap-south-1"
   }

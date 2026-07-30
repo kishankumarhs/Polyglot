@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"compress/gzip"
 	"fmt"
 	"io"
 	"os"
@@ -18,17 +19,19 @@ type rotatingWriter struct {
 	maxSize    int64
 	maxBackups int
 	maxAge     time.Duration
+	compress   bool
 	size       int64
 	file       *os.File
 	closed     bool
 }
 
-func newRotatingWriter(filename string, maxSizeMB, maxBackups, maxAgeDays int) (*rotatingWriter, error) {
+func newRotatingWriter(filename string, maxSizeMB, maxBackups, maxAgeDays int, compress bool) (*rotatingWriter, error) {
 	w := &rotatingWriter{
 		filename:   filename,
 		maxSize:    int64(maxSizeMB) * 1024 * 1024,
 		maxBackups: maxBackups,
 		maxAge:     time.Duration(maxAgeDays) * 24 * time.Hour,
+		compress:   compress,
 	}
 	if err := w.openExistingOrNew(); err != nil {
 		return nil, err
@@ -130,6 +133,9 @@ func (w *rotatingWriter) rotate() error {
 	if err := os.Rename(w.filename, backupName); err != nil && !os.IsNotExist(err) {
 		return err
 	}
+	if w.compress {
+		go compressBackup(backupName)
+	}
 
 	if err := w.openNew(); err != nil {
 		return err
@@ -180,6 +186,36 @@ func (w *rotatingWriter) cleanup() {
 			_ = os.Remove(b.path)
 		}
 	}
+}
+
+func compressBackup(path string) {
+	in, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+	outPath := path + ".gz"
+	out, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	if err != nil {
+		return
+	}
+	gz := gzip.NewWriter(out)
+	if _, err := io.Copy(gz, in); err != nil {
+		_ = gz.Close()
+		_ = out.Close()
+		_ = os.Remove(outPath)
+		return
+	}
+	if err := gz.Close(); err != nil {
+		_ = out.Close()
+		_ = os.Remove(outPath)
+		return
+	}
+	if err := out.Close(); err != nil {
+		_ = os.Remove(outPath)
+		return
+	}
+	_ = os.Remove(path)
 }
 
 // Ensure rotatingWriter implements io.WriteCloser.

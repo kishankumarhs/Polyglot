@@ -10,9 +10,7 @@ func newFileSink(cfg *FileConfig) (*fileSink, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("nil file config")
 	}
-	// Compress is accepted in config but not yet implemented.
-	_ = cfg.Compress
-	rw, err := newRotatingWriter(cfg.Path, cfg.MaxSizeMB, cfg.MaxBackups, cfg.MaxAgeDays)
+	rw, err := newRotatingWriter(cfg.Path, cfg.MaxSizeMB, cfg.MaxBackups, cfg.MaxAgeDays, cfg.Compress)
 	if err != nil {
 		return nil, err
 	}

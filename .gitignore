@@ -39,3 +39,7 @@ bindings/dotnet/**/native/
 # .vscode/
 .DS_Store
 *.log
+
+# Accidental build artifacts
+/codegen
+/liblogger.h

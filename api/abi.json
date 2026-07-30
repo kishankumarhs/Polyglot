@@ -64,6 +64,15 @@
       ]
     },
     {
+      "name": "logger_with",
+      "doc": "Create a child logger handle that inherits sinks/queue and merges fields_json.\nClosing the child is a no-op; close the parent/root handle to shut down.",
+      "returns": "handle",
+      "args": [
+        { "name": "handle", "type": "handle" },
+        { "name": "fields_json", "type": "string", "nullable": true }
+      ]
+    },
+    {
       "name": "logger_set_fields",
       "doc": "Replace runtime context fields (merged into every subsequent log).",
       "returns": "int",
@@ -95,7 +104,7 @@
     },
     {
       "name": "logger_stats",
-      "doc": "Stats JSON: {\"queued\":N,\"dropped\":N,\"flushed\":N,\"bytes_written\":N}\nPointer is owned by the library until the next logger_stats/logger_last_error\ncall on the same handle, or logger_close. Do not free it.\nReturns NULL for an invalid handle; logger_last_error(NULL) then explains it.",
+      "doc": "Stats JSON: {\"queued\":N,\"dropped\":N,\"flushed\":N,\"bytes_written\":N,\"write_errors\":N,\"buffered\":N,\"sink_dropped\":N}\nPointer is owned by the library until the next logger_stats/logger_last_error\ncall on the same handle, or logger_close. Do not free it.\nReturns NULL for an invalid handle; logger_last_error(NULL) then explains it.",
       "returns": "string",
       "args": [{ "name": "handle", "type": "handle" }]
     },
@@ -113,7 +122,7 @@
     },
     {
       "name": "logger_create_from_config_file",
-      "doc": "Create a logger from a config file path (YAML or JSON).\nIf path is empty, checks POLYGLOT_CONFIG_PATH environment variable.\nIf neither found, uses defaults. Returns handle on success, NULL on failure.",
+      "doc": "Create a logger from a config file path (YAML or JSON).\nIf path is empty, checks POLYGLOT_CONFIG_PATH environment variable.\nIf neither found, uses defaults unless POLYLOG_STRICT=1 (then errors).\nReturns handle on success, NULL on failure.",
       "args": [{ "name": "config_path", "type": "string" }],
       "returns": "handle"
     }

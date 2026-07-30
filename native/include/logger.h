@@ -59,6 +59,12 @@ LOGGER_API int logger_log(logger_handle handle, int level, const char* message, 
 /* Emit a log with no extra fields. */
 LOGGER_API int logger_log_simple(logger_handle handle, int level, const char* message);
 
+/*
+ * Create a child logger handle that inherits sinks/queue and merges fields_json.
+ * Closing the child is a no-op; close the parent/root handle to shut down.
+ */
+LOGGER_API logger_handle logger_with(logger_handle handle, const char* fields_json);
+
 /* Replace runtime context fields (merged into every subsequent log). */
 LOGGER_API int logger_set_fields(logger_handle handle, const char* fields_json);
 
@@ -72,7 +78,7 @@ LOGGER_API int logger_flush(logger_handle handle);
 LOGGER_API int logger_close(logger_handle handle);
 
 /*
- * Stats JSON: {"queued":N,"dropped":N,"flushed":N,"bytes_written":N}
+ * Stats JSON: {"queued":N,"dropped":N,"flushed":N,"bytes_written":N,"write_errors":N,"buffered":N,"sink_dropped":N}
  * Pointer is owned by the library until the next logger_stats/logger_last_error
  * call on the same handle, or logger_close. Do not free it.
  * Returns NULL for an invalid handle; logger_last_error(NULL) then explains it.
@@ -95,7 +101,8 @@ LOGGER_API void logger_free_string(char* s);
 /*
  * Create a logger from a config file path (YAML or JSON).
  * If path is empty, checks POLYGLOT_CONFIG_PATH environment variable.
- * If neither found, uses defaults. Returns handle on success, NULL on failure.
+ * If neither found, uses defaults unless POLYLOG_STRICT=1 (then errors).
+ * Returns handle on success, NULL on failure.
  */
 LOGGER_API logger_handle logger_create_from_config_file(const char* config_path);
 

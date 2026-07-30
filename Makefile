@@ -1,4 +1,4 @@
-.PHONY: codegen test build-native demo clean
+.PHONY: codegen test build-native demo clean doctor check-submodules
 
 codegen:
 	go run ./cmd/codegen
@@ -15,8 +15,15 @@ build-native: codegen
 demo:
 	go run ./cmd/logger-demo
 
+doctor:
+	go run ./cmd/polyglot doctor
+
+check-submodules:
+	bash scripts/check-submodules.sh
+
 clean:
 	rm -rf dist build
 	rm -rf bindings/python/polyglot_logger/native
 	rm -rf bindings/node/native bindings/node/dist
 	rm -rf bindings/dotnet/Polyglot.Logger/native
+	rm -f codegen liblogger.h

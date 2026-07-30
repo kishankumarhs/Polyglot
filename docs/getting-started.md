@@ -2,7 +2,25 @@
 
 This guide takes you from a clean checkout to your first structured log line in under ten minutes.
 
-## Prerequisites
+## Quick start (app developers)
+
+```bash
+npm install @polyglot-logger/node
+# or: pip install polyglot-logger
+```
+
+See the root [README](../README.md) and [zero-config](zero-config.md).
+
+## Contributor build
+
+```bash
+git clone --recurse-submodules <repo-url>
+cd logger
+bash scripts/check-submodules.sh
+make build-native
+```
+
+### Prerequisites
 
 | Tool | Notes |
 | ---- | ----- |
@@ -10,9 +28,7 @@ This guide takes you from a clean checkout to your first structured log line in 
 | C toolchain | gcc (Linux/macOS), MinGW or MSVC (Windows) — CGO must be enabled |
 | Optional | Python 3.9+, Node 18+, .NET 8+ depending on which binding you use |
 
-On Windows with Scoop MinGW, ensure gcc is on `PATH` (for example `C:\Users\<you>\scoop\apps\mingw\current\bin`) and set `CGO_ENABLED=1`.
-
-## 1. Clone and build the native library
+On Windows with Scoop MinGW, ensure gcc is on `PATH` and set `CGO_ENABLED=1`.
 
 ```bash
 cd logger

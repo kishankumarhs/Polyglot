@@ -1,16 +1,27 @@
 package logger
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 const (
-	Version    = "0.2.0"
+	Version    = "0.3.0"
 	ABIVersion = 1
+)
+
+// Context keys for optional trace correlation (language-agnostic contract).
+type ctxKey string
+
+const (
+	CtxTraceID ctxKey = "polyglot.trace_id"
+	CtxSpanID  ctxKey = "polyglot.span_id"
 )
 
 // Entry is a structured log record.
@@ -21,6 +32,7 @@ type Entry struct {
 	ServiceName    string         `json:"service_name"`
 	ServiceVersion string         `json:"service_version,omitempty"`
 	Environment    string         `json:"environment,omitempty"`
+	Caller         string         `json:"caller,omitempty"`
 	Fields         map[string]any `json:"fields,omitempty"`
 }
 
@@ -54,16 +66,16 @@ type Logger struct {
 	stopCh   chan struct{}
 	doneCh   chan struct{}
 
-	// dropOldestMu makes the pop-then-push sequence atomic so a concurrent
-	// producer cannot refill the queue between the two steps and force the new
-	// item to be dropped instead of the oldest one.
 	dropOldestMu sync.Mutex
+	shutdownErr  error
+	closed       atomic.Bool
 
-	// shutdownErr is written by the worker before doneCh closes, so Close can
-	// report flush/close failures instead of silently succeeding.
-	shutdownErr error
+	// owner is non-nil for child loggers created by With(); they share the
+	// root's sinks/queue and must not Close the root.
+	owner *Logger
+	extra map[string]any
 
-	closed atomic.Bool
+	sampler *sampler
 }
 
 // New creates a Logger from Config.
@@ -86,6 +98,7 @@ func New(cfg Config) (*Logger, error) {
 		context:  map[string]any{},
 		async:    cfg.Async,
 		overflow: cfg.Overflow,
+		sampler:  newSampler(cfg.Sampling),
 	}
 
 	if cfg.Async {
@@ -99,27 +112,63 @@ func New(cfg Config) (*Logger, error) {
 	return l, nil
 }
 
+func (l *Logger) root() *Logger {
+	if l.owner != nil {
+		return l.owner
+	}
+	return l
+}
+
+// With returns a child logger that inherits sinks and queue from the root but
+// carries additional immutable fields. Closing a child is a no-op; close the root.
+func (l *Logger) With(fields map[string]any) *Logger {
+	r := l.root()
+	extras := mergeMaps(l.extra, fields)
+	return &Logger{
+		owner: r,
+		extra: extras,
+	}
+}
+
+// IsChild reports whether this logger was created by With().
+func (l *Logger) IsChild() bool {
+	return l.owner != nil
+}
+
 // Log emits a structured log line at the given level.
 func (l *Logger) Log(level Level, message string, fields map[string]any) error {
-	if l.closed.Load() {
+	return l.logAt(level, message, fields, 3)
+}
+
+func (l *Logger) logAt(level Level, message string, fields map[string]any, callerSkip int) error {
+	r := l.root()
+	if r.closed.Load() {
 		return fmt.Errorf("logger is closed")
 	}
 
-	l.mu.RLock()
-	minLevel := l.minLevel
-	cfg := l.cfg
-	ctx := cloneAnyMap(l.context)
-	l.mu.RUnlock()
+	r.mu.RLock()
+	minLevel := r.minLevel
+	cfg := r.cfg
+	ctx := cloneAnyMap(r.context)
+	sampler := r.sampler
+	r.mu.RUnlock()
 
 	if !level.Enabled(minLevel) {
 		return nil
 	}
+	if sampler != nil && !sampler.allow(level, message) {
+		r.stats.dropped.Add(1)
+		return nil
+	}
 
-	merged := make(map[string]any, len(cfg.Fields)+len(ctx)+len(fields))
+	merged := make(map[string]any, len(cfg.Fields)+len(ctx)+len(l.extra)+len(fields))
 	for k, v := range cfg.Fields {
 		merged[k] = v
 	}
 	for k, v := range ctx {
+		merged[k] = v
+	}
+	for k, v := range l.extra {
 		merged[k] = v
 	}
 	for k, v := range fields {
@@ -138,17 +187,51 @@ func (l *Logger) Log(level Level, message string, fields map[string]any) error {
 		Environment:    cfg.Environment,
 		Fields:         merged,
 	}
+	if cfg.Caller {
+		entry.Caller = callerFrame(callerSkip)
+	}
 
-	payload, err := json.Marshal(entry)
+	var payload []byte
+	var err error
+	payload, err = json.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("marshal log entry: %w", err)
 	}
 	payload = append(payload, '\n')
 
-	if !l.async {
-		return l.writePayload(payload)
+	if !r.async {
+		return r.writePayload(payload)
 	}
-	return l.enqueue(payload)
+	return r.enqueue(payload)
+}
+
+// LogContext emits a log and merges trace_id/span_id from ctx when present.
+func (l *Logger) LogContext(ctx context.Context, level Level, message string, fields map[string]any) error {
+	merged := cloneAnyMap(fields)
+	if merged == nil {
+		merged = map[string]any{}
+	}
+	if ctx != nil {
+		if v := ctx.Value(CtxTraceID); v != nil {
+			merged["trace_id"] = fmt.Sprint(v)
+		}
+		if v := ctx.Value(CtxSpanID); v != nil {
+			merged["span_id"] = fmt.Sprint(v)
+		}
+	}
+	return l.logAt(level, message, merged, 3)
+}
+
+// LogError logs at error level and attaches err under fields["error"].
+func (l *Logger) LogError(err error, message string, fields map[string]any) error {
+	merged := cloneAnyMap(fields)
+	if merged == nil {
+		merged = map[string]any{}
+	}
+	if err != nil {
+		merged["error"] = err.Error()
+	}
+	return l.logAt(LevelError, message, merged, 3)
 }
 
 // LogJSON emits a log using a level name and JSON object for fields.
@@ -157,7 +240,7 @@ func (l *Logger) LogJSON(levelName, message, fieldsJSON string) error {
 	if err != nil {
 		return err
 	}
-	fields, err := parseFieldsJSON(fieldsJSON)
+	fields, err := ParseFieldsJSON(fieldsJSON)
 	if err != nil {
 		return err
 	}
@@ -170,7 +253,7 @@ func (l *Logger) LogInt(levelInt int, message, fieldsJSON string) error {
 	if err != nil {
 		return err
 	}
-	fields, err := parseFieldsJSON(fieldsJSON)
+	fields, err := ParseFieldsJSON(fieldsJSON)
 	if err != nil {
 		return err
 	}
@@ -179,19 +262,21 @@ func (l *Logger) LogInt(levelInt int, message, fieldsJSON string) error {
 
 // SetFields replaces runtime context fields merged into every subsequent log.
 // Config base fields are unchanged; per-call fields still override context.
+// On a child logger this updates the root's context (shared).
 func (l *Logger) SetFields(fields map[string]any) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
+	r := l.root()
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if fields == nil {
-		l.context = map[string]any{}
+		r.context = map[string]any{}
 		return
 	}
-	l.context = cloneAnyMap(fields)
+	r.context = cloneAnyMap(fields)
 }
 
 // SetFieldsJSON replaces runtime context fields from a JSON object.
 func (l *Logger) SetFieldsJSON(fieldsJSON string) error {
-	fields, err := parseFieldsJSON(fieldsJSON)
+	fields, err := ParseFieldsJSON(fieldsJSON)
 	if err != nil {
 		return err
 	}
@@ -201,10 +286,11 @@ func (l *Logger) SetFieldsJSON(fieldsJSON string) error {
 
 // Stats returns a snapshot of runtime counters.
 func (l *Logger) Stats() Stats {
-	s := l.stats.snapshot()
-	l.mu.RLock()
-	buffered, dropped := sinkBacklog(l.sinks)
-	l.mu.RUnlock()
+	r := l.root()
+	s := r.stats.snapshot()
+	r.mu.RLock()
+	buffered, dropped := sinkBacklog(r.sinks)
+	r.mu.RUnlock()
 	s.Buffered = uint64(buffered)
 	s.SinkDropped = uint64(dropped)
 	return s
@@ -219,49 +305,82 @@ func (l *Logger) StatsJSON() string {
 	return string(data)
 }
 
-// ReloadConfig hot-reloads configuration (level, fields, sinks, async overflow settings).
+// MetricsText returns a Prometheus-style text dump of counters for scraping.
+func (l *Logger) MetricsText() string {
+	s := l.Stats()
+	return fmt.Sprintf(
+		"# HELP polyglot_logger_queued Entries waiting in the async queue\n"+
+			"# TYPE polyglot_logger_queued gauge\n"+
+			"polyglot_logger_queued %d\n"+
+			"# HELP polyglot_logger_dropped Entries dropped by overflow or sampling\n"+
+			"# TYPE polyglot_logger_dropped counter\n"+
+			"polyglot_logger_dropped %d\n"+
+			"# HELP polyglot_logger_flushed Entries handed to sinks\n"+
+			"# TYPE polyglot_logger_flushed counter\n"+
+			"polyglot_logger_flushed %d\n"+
+			"# HELP polyglot_logger_bytes_written Serialized bytes handed to sinks\n"+
+			"# TYPE polyglot_logger_bytes_written counter\n"+
+			"polyglot_logger_bytes_written %d\n"+
+			"# HELP polyglot_logger_write_errors Payloads with at least one sink write failure\n"+
+			"# TYPE polyglot_logger_write_errors counter\n"+
+			"polyglot_logger_write_errors %d\n"+
+			"# HELP polyglot_logger_buffered Lines buffered in sinks pending delivery\n"+
+			"# TYPE polyglot_logger_buffered gauge\n"+
+			"polyglot_logger_buffered %d\n"+
+			"# HELP polyglot_logger_sink_dropped Lines discarded by sink retry buffers\n"+
+			"# TYPE polyglot_logger_sink_dropped counter\n"+
+			"polyglot_logger_sink_dropped %d\n",
+		s.Queued, s.Dropped, s.Flushed, s.BytesWritten, s.WriteErrors, s.Buffered, s.SinkDropped,
+	)
+}
+
+// ReloadConfig hot-reloads configuration (level, fields, sinks, overflow).
 func (l *Logger) ReloadConfig(cfg Config) error {
+	r := l.root()
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
-	if l.closed.Load() {
+	if r.closed.Load() {
 		return fmt.Errorf("logger is closed")
 	}
-	if l.async {
+	if r.async {
 		req := reloadRequest{cfg: cfg, done: make(chan error, 1)}
 		select {
-		case l.reloadCh <- req:
+		case r.reloadCh <- req:
 			return <-req.done
-		case <-l.doneCh:
+		case <-r.doneCh:
 			return fmt.Errorf("logger is closed")
 		}
 	}
-	return l.applyConfig(cfg)
+	return r.applyConfig(cfg)
 }
 
 // Flush drains the async queue (if any) and syncs sinks.
 func (l *Logger) Flush() error {
-	if l.closed.Load() {
+	r := l.root()
+	if r.closed.Load() {
 		return fmt.Errorf("logger is closed")
 	}
-	if l.async {
+	if r.async {
 		req := flushRequest{done: make(chan error, 1)}
 		select {
-		case l.flushCh <- req:
+		case r.flushCh <- req:
 			return <-req.done
-		case <-l.doneCh:
+		case <-r.doneCh:
 			return fmt.Errorf("logger is closed")
 		}
 	}
-	l.mu.RLock()
-	defer l.mu.RUnlock()
-	return flushSinks(l.sinks)
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return flushSinks(r.sinks)
 }
 
-// Close stops the worker cleanly, flushes, and closes sinks. It returns the
-// first flush/close error so callers can detect an incomplete shutdown (for
-// example logs the HTTP collector never accepted).
+// Close stops the worker cleanly, flushes, and closes sinks.
+// Closing a child logger is a no-op; close the root logger instead.
 func (l *Logger) Close() error {
+	if l.owner != nil {
+		return nil
+	}
 	if !l.closed.CompareAndSwap(false, true) {
 		return nil
 	}
@@ -285,7 +404,6 @@ func (l *Logger) Close() error {
 func (l *Logger) enqueue(payload []byte) error {
 	item := queueItem{payload: payload}
 
-	// Read under the same lock that applyConfig uses to write it.
 	l.mu.RLock()
 	overflow := l.overflow
 	l.mu.RUnlock()
@@ -306,8 +424,6 @@ func (l *Logger) enqueue(payload []byte) error {
 			return nil
 		default:
 		}
-		// Serialize pop+push so the freed slot cannot be taken by another
-		// producer, which would drop the newest item instead of the oldest.
 		l.dropOldestMu.Lock()
 		defer l.dropOldestMu.Unlock()
 		select {
@@ -324,7 +440,7 @@ func (l *Logger) enqueue(payload []byte) error {
 			l.stats.dropped.Add(1)
 			return nil
 		}
-	default: // drop_newest
+	default:
 		select {
 		case l.queue <- item:
 			l.stats.queued.Add(1)
@@ -380,8 +496,6 @@ func (l *Logger) drainQueue() {
 }
 
 func (l *Logger) writePayload(payload []byte) error {
-	// Held for the whole write so a concurrent reload cannot close the sinks
-	// underneath an in-flight write (a closed file sink would silently reopen).
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 
@@ -394,8 +508,6 @@ func (l *Logger) writePayload(payload []byte) error {
 	l.stats.flushed.Add(1)
 	l.stats.bytesWritten.Add(uint64(len(payload)))
 	if first != nil {
-		// Async callers already got a nil error from Log(), so this counter is
-		// the only way they learn that sinks are failing.
 		l.stats.writeErrors.Add(1)
 	}
 	return first
@@ -418,12 +530,13 @@ func (l *Logger) applyConfig(cfg Config) error {
 	l.minLevel = cfg.MinLevelValue()
 	l.sinks = newSinks
 	l.overflow = cfg.Overflow
-	// Async mode itself is fixed at construction; queue size stays as created.
+	l.sampler = newSampler(cfg.Sampling)
 	l.mu.Unlock()
 	return nil
 }
 
-func parseFieldsJSON(fieldsJSON string) (map[string]any, error) {
+// ParseFieldsJSON parses a JSON object into a field map.
+func ParseFieldsJSON(fieldsJSON string) (map[string]any, error) {
 	if fieldsJSON == "" || fieldsJSON == "null" || fieldsJSON == "{}" {
 		return nil, nil
 	}
@@ -445,25 +558,58 @@ func cloneAnyMap(in map[string]any) map[string]any {
 	return out
 }
 
+func mergeMaps(base, overlay map[string]any) map[string]any {
+	out := cloneAnyMap(base)
+	for k, v := range overlay {
+		out[k] = v
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+func callerFrame(skip int) string {
+	_, file, line, ok := runtime.Caller(skip)
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("%s:%d", filepath.Base(file), line)
+}
+
 // Convenience helpers.
 func (l *Logger) Trace(msg string, fields map[string]any) error {
-	return l.Log(LevelTrace, msg, fields)
+	return l.logAt(LevelTrace, msg, fields, 3)
 }
 func (l *Logger) Debug(msg string, fields map[string]any) error {
-	return l.Log(LevelDebug, msg, fields)
+	return l.logAt(LevelDebug, msg, fields, 3)
 }
 func (l *Logger) Info(msg string, fields map[string]any) error {
-	return l.Log(LevelInfo, msg, fields)
+	return l.logAt(LevelInfo, msg, fields, 3)
 }
 func (l *Logger) Warn(msg string, fields map[string]any) error {
-	return l.Log(LevelWarn, msg, fields)
+	return l.logAt(LevelWarn, msg, fields, 3)
 }
 func (l *Logger) Error(msg string, fields map[string]any) error {
-	return l.Log(LevelError, msg, fields)
+	return l.logAt(LevelError, msg, fields, 3)
 }
 
 // Fatal writes at fatal level. It does NOT terminate the process; the caller
 // decides whether to exit.
 func (l *Logger) Fatal(msg string, fields map[string]any) error {
-	return l.Log(LevelFatal, msg, fields)
+	return l.logAt(LevelFatal, msg, fields, 3)
+}
+
+// ContextWithTrace returns a child context carrying trace and span ids.
+func ContextWithTrace(ctx context.Context, traceID, spanID string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if traceID != "" {
+		ctx = context.WithValue(ctx, CtxTraceID, traceID)
+	}
+	if spanID != "" {
+		ctx = context.WithValue(ctx, CtxSpanID, spanID)
+	}
+	return ctx
 }
