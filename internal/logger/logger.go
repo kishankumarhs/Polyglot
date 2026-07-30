@@ -1,10 +1,10 @@
 package logger
 
 import (
-	"maps"
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"runtime"
 	"sync"

@@ -124,6 +124,12 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq gcc
           bash scripts/build-native.sh dist
+      # bench.mjs requires bindings/node, whose main is the compiled dist/index.js.
+      - name: Build Node bindings
+        working-directory: bindings/node
+        run: |
+          npm install --silent
+          npm run build
       - name: Run benches
         env:
           POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
@@ -138,6 +144,7 @@ jobs:
           go test -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile' \
             -benchmem -count=3 -timeout 20m | tee ../results/go-release.txt
           go test -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 10m | tee -a ../results/go-release.txt
+          BENCH_SCALE_CSV=1 go test -count=1 -run 'TestScaleCSV' -timeout 10m | tee -a ../results/go-release.txt
           cd ../node
           npm install --silent
           node bench.mjs | tee ../results/node-release.txt

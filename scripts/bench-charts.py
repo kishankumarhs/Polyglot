@@ -185,6 +185,25 @@ def _draw_text(
                     )
 
 
+def no_data(stem: Path, title: str, msg: str) -> None:
+    """Render an explicit placeholder instead of a misleading zero-valued plot."""
+    width, height = 720, 360
+    svg = "\n".join(
+        [
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="Segoe UI, system-ui, sans-serif">',
+            '<rect width="100%" height="100%" fill="#fafafa"/>',
+            f'<text x="{width/2}" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">{title}</text>',
+            f'<text x="{width/2}" y="{height/2}" text-anchor="middle" font-size="14" fill="#999">{msg}</text>',
+            "</svg>",
+        ]
+    )
+    stem.with_suffix(".svg").write_text(svg, encoding="utf-8")
+    rgb = [(250, 250, 250)] * (width * height)
+    _draw_text(rgb, width, width // 2, 12, title, (17, 17, 17), scale=2, center=True)
+    _draw_text(rgb, width, width // 2, height // 2, msg, (153, 153, 153), scale=1, center=True)
+    write_png(stem.with_suffix(".png"), width, height, rgb)
+
+
 def bar_chart(stem: Path, title: str, series: dict[str, float], unit: str, color: str = "#2563eb") -> None:
     width, height = 720, 360
     pad_l, pad_r, pad_t, pad_b = 40, 40, 50, 70
@@ -248,30 +267,38 @@ def line_chart(stem: Path, title: str, series: dict[str, float], xlab: str, ylab
     plot_h = height - pad_t - pad_b
     items = [(float(k), float(v)) for k, v in series.items()]
     items.sort()
-    if len(items) < 2:
-        # still write empty-ish SVG note
-        bar_chart(stem, title, {k: float(v) for k, v in series.items()} or {"n/a": 0}, ylab)
+    if len(items) < 2 or max((v for _, v in items), default=0) <= 0:
+        no_data(stem, title, "no data — run `make bench` (needs bench/results/scale.csv)")
         return
-    xs = [x for x, _ in items]
     ys = [y for _, y in items]
-    xmin, xmax = min(xs), max(xs)
     ymin, ymax = 0.0, max(ys) * 1.1 or 1.0
+    # Writer counts double each step, so space them evenly rather than linearly.
+    xpos = {x: i for i, (x, _) in enumerate(items)}
+    last = max(len(items) - 1, 1)
 
     def sx(x: float) -> float:
-        return pad_l + (x - xmin) / (xmax - xmin or 1) * plot_w
+        return pad_l + xpos[x] / last * plot_w
 
     def sy(y: float) -> float:
         return pad_t + plot_h - (y - ymin) / (ymax - ymin or 1) * plot_h
 
+    yticks = [ymax * i / 4 for i in range(5)]
     pts = " ".join(f"{sx(x):.1f},{sy(y):.1f}" for x, y in items)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" font-family="Segoe UI, system-ui, sans-serif">',
         '<rect width="100%" height="100%" fill="#fafafa"/>',
         f'<text x="{width/2}" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">{title}</text>',
-        f'<polyline fill="none" stroke="#2563eb" stroke-width="3" points="{pts}"/>',
     ]
+    for t in yticks:
+        gy = sy(t)
+        parts.append(f'<line x1="{pad_l}" y1="{gy:.1f}" x2="{width - pad_r}" y2="{gy:.1f}" stroke="#e5e5e5" stroke-width="1"/>')
+        parts.append(f'<text x="{pad_l - 8}" y="{gy + 4:.1f}" text-anchor="end" font-size="11" fill="#666">{_fmt(t)}</text>')
+    parts.append(f'<polyline fill="none" stroke="#2563eb" stroke-width="3" points="{pts}"/>')
     for x, y in items:
         parts.append(f'<circle cx="{sx(x):.1f}" cy="{sy(y):.1f}" r="4" fill="#1d4ed8"/>')
+        parts.append(
+            f'<text x="{sx(x):.1f}" y="{pad_t + plot_h + 16:.1f}" text-anchor="middle" font-size="11" fill="#333">{x:.0f}</text>'
+        )
     parts.append(f'<text x="{width/2}" y="{height-12}" text-anchor="middle" font-size="12" fill="#666">{xlab}</text>')
     parts.append(
         f'<text x="16" y="{height/2}" text-anchor="middle" font-size="12" fill="#666" transform="rotate(-90 16 {height/2})">{ylab}</text>'
@@ -286,6 +313,10 @@ def line_chart(stem: Path, title: str, series: dict[str, float], xlab: str, ylab
     rgb = [bg] * (width * height)
     _draw_text(rgb, width, width // 2, 12, title, ink, scale=2, center=True)
     _draw_text(rgb, width, width // 2, height - 28, xlab, (102, 102, 102), scale=1, center=True)
+    for t in yticks:
+        gy = int(sy(t))
+        _fill(rgb, width, pad_l, gy, width - pad_r, gy + 1, (229, 229, 229))
+        _draw_text(rgb, width, pad_l - 36, gy - 3, _fmt(t), (102, 102, 102), scale=1)
     points = [(int(sx(x)), int(sy(y))) for x, y in items]
     for i in range(len(points) - 1):
         x0, y0 = points[i]
@@ -296,8 +327,9 @@ def line_chart(stem: Path, title: str, series: dict[str, float], xlab: str, ylab
             x = int(x0 + (x1 - x0) * t)
             y = int(y0 + (y1 - y0) * t)
             _fill(rgb, width, x - 1, y - 1, x + 2, y + 2, line)
-    for x, y in points:
+    for (x, y), (xv, _) in zip(points, items):
         _fill(rgb, width, x - 3, y - 3, x + 4, y + 4, (29, 78, 216))
+        _draw_text(rgb, width, x, pad_t + plot_h + 8, f"{xv:.0f}", (51, 51, 51), scale=1, center=True)
     write_png(stem.with_suffix(".png"), width, height, rgb)
 
 

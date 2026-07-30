@@ -18,6 +18,12 @@ if [[ -f dist/logger.dll || -f dist/liblogger.so || -f dist/liblogger.dylib ]]; 
     Darwin*) export POLYGLOT_LOGGER_LIB="$ROOT/dist/liblogger.dylib" ;;
     *) export POLYGLOT_LOGGER_LIB="$ROOT/dist/liblogger.so" ;;
   esac
+  # bench.mjs requires bindings/node, whose main is the compiled dist/index.js.
+  (
+    cd bindings/node
+    npm install --silent
+    npm run build --silent
+  )
   (
     cd bench/node
     npm install --silent

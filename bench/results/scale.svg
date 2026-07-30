@@ -1,14 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" font-family="Segoe UI, system-ui, sans-serif">
 <rect width="100%" height="100%" fill="#fafafa"/>
 <text x="360.0" y="28" text-anchor="middle" font-size="18" font-weight="600" fill="#111">Polyglot scale (writers → ops/s)</text>
-<polyline fill="none" stroke="#2563eb" stroke-width="3" points="70.0,310.0 79.8,310.0 99.5,310.0 138.9,310.0 217.6,310.0 375.1,310.0 690.0,310.0"/>
-<circle cx="70.0" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="79.8" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="99.5" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="138.9" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="217.6" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="375.1" cy="310.0" r="4" fill="#1d4ed8"/>
-<circle cx="690.0" cy="310.0" r="4" fill="#1d4ed8"/>
+<line x1="70" y1="310.0" x2="690" y2="310.0" stroke="#e5e5e5" stroke-width="1"/>
+<text x="62" y="314.0" text-anchor="end" font-size="11" fill="#666">0</text>
+<line x1="70" y1="245.0" x2="690" y2="245.0" stroke="#e5e5e5" stroke-width="1"/>
+<text x="62" y="249.0" text-anchor="end" font-size="11" fill="#666">10.7k</text>
+<line x1="70" y1="180.0" x2="690" y2="180.0" stroke="#e5e5e5" stroke-width="1"/>
+<text x="62" y="184.0" text-anchor="end" font-size="11" fill="#666">21.4k</text>
+<line x1="70" y1="115.0" x2="690" y2="115.0" stroke="#e5e5e5" stroke-width="1"/>
+<text x="62" y="119.0" text-anchor="end" font-size="11" fill="#666">32.0k</text>
+<line x1="70" y1="50.0" x2="690" y2="50.0" stroke="#e5e5e5" stroke-width="1"/>
+<text x="62" y="54.0" text-anchor="end" font-size="11" fill="#666">42.7k</text>
+<polyline fill="none" stroke="#2563eb" stroke-width="3" points="70.0,73.6 173.3,196.6 276.7,226.0 380.0,180.4 483.3,111.3 586.7,114.6 690.0,91.3"/>
+<circle cx="70.0" cy="73.6" r="4" fill="#1d4ed8"/>
+<text x="70.0" y="326.0" text-anchor="middle" font-size="11" fill="#333">1</text>
+<circle cx="173.3" cy="196.6" r="4" fill="#1d4ed8"/>
+<text x="173.3" y="326.0" text-anchor="middle" font-size="11" fill="#333">2</text>
+<circle cx="276.7" cy="226.0" r="4" fill="#1d4ed8"/>
+<text x="276.7" y="326.0" text-anchor="middle" font-size="11" fill="#333">4</text>
+<circle cx="380.0" cy="180.4" r="4" fill="#1d4ed8"/>
+<text x="380.0" y="326.0" text-anchor="middle" font-size="11" fill="#333">8</text>
+<circle cx="483.3" cy="111.3" r="4" fill="#1d4ed8"/>
+<text x="483.3" y="326.0" text-anchor="middle" font-size="11" fill="#333">16</text>
+<circle cx="586.7" cy="114.6" r="4" fill="#1d4ed8"/>
+<text x="586.7" y="326.0" text-anchor="middle" font-size="11" fill="#333">32</text>
+<circle cx="690.0" cy="91.3" r="4" fill="#1d4ed8"/>
+<text x="690.0" y="326.0" text-anchor="middle" font-size="11" fill="#333">64</text>
 <text x="360.0" y="348" text-anchor="middle" font-size="12" fill="#666">writers</text>
 <text x="16" y="180.0" text-anchor="middle" font-size="12" fill="#666" transform="rotate(-90 16 180.0)">ops/s</text>
 </svg>

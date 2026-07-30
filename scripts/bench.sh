@@ -27,9 +27,16 @@ echo "==> Go benches (zap / zerolog / polyglot)"
   go test -bench='BenchmarkPolyglotSyncFile|BenchmarkPolyglotAsyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile|BenchmarkSlogJSONFile|BenchmarkPolyglotWithChild|BenchmarkZapWithChild|BenchmarkZerologWithChild|BenchmarkPolyglotMemoryAllocs' \
     -benchmem -count=3 -timeout 30m | tee "../../$OUT_GO"
   go test -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 10m | tee -a "../../$OUT_GO"
+  BENCH_SCALE_CSV=1 go test -count=1 -run 'TestScaleCSV' -timeout 10m | tee -a "../../$OUT_GO"
 )
 
 echo "==> Node file benches (+ Bun if present)"
+# bench.mjs requires bindings/node, whose main is the compiled dist/index.js.
+(
+  cd bindings/node
+  npm install --silent
+  npm run build --silent
+)
 (
   cd bench/node
   npm install --silent
