@@ -136,11 +136,7 @@ jobs:
           path: artifacts/
 
       - name: Organize native binaries for npm
-        run: |
-          mkdir -p bindings/node/bin
-          # Copy all .so and .dll files
-          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/node/bin/ \;
-          ls -la bindings/node/bin/
+        run: bash scripts/package-native-libs.sh artifacts bindings/node
 
       - name: Install dependencies
         working-directory: bindings/node
@@ -152,6 +148,7 @@ jobs:
 
       - name: Package npm tarball
         working-directory: bindings/node
+        # prepack must not rebuild native (would wipe multi-arch bins)
         run: npm pack
 
       - name: Upload npm package
@@ -183,11 +180,7 @@ jobs:
           path: artifacts/
 
       - name: Organize native binaries for Python
-        run: |
-          mkdir -p bindings/python/polyglot_logger/bin
-          # Copy all .so and .dll files
-          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/python/polyglot_logger/bin/ \;
-          ls -la bindings/python/polyglot_logger/bin/
+        run: bash scripts/package-native-libs.sh artifacts bindings/python/polyglot_logger
 
       - name: Install build tools
         run: |
@@ -225,11 +218,7 @@ jobs:
           path: artifacts/
 
       - name: Organize native binaries for .NET
-        run: |
-          mkdir -p bindings/dotnet/Polyglot.Logger/native
-          # Copy all .so and .dll files
-          find artifacts \( -name "*.so" -o -name "*.dll" -o -name "*.dylib" \) -exec cp {} bindings/dotnet/Polyglot.Logger/native/ \;
-          ls -la bindings/dotnet/Polyglot.Logger/native/
+        run: bash scripts/package-native-libs.sh artifacts bindings/dotnet/Polyglot.Logger
 
       - name: Build NuGet package
         working-directory: bindings/dotnet/Polyglot.Logger
