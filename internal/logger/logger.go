@@ -456,36 +456,77 @@ func (l *Logger) enqueue(payload []byte) error {
 func (l *Logger) worker() {
 	defer close(l.doneCh)
 	for {
+		// Prefer flush/reload/stop over the hot queue. A plain multi-way select
+		// can starve control channels when writers keep the queue ready.
+		if l.serviceControl() {
+			return
+		}
 		select {
 		case item := <-l.queue:
 			l.stats.queued.Add(-1)
 			_ = l.writePayload(item.payload)
 		case req := <-l.flushCh:
-			l.drainQueue()
-			l.mu.RLock()
-			err := flushSinks(l.sinks)
-			l.mu.RUnlock()
-			req.done <- err
+			l.handleFlush(req)
 		case req := <-l.reloadCh:
-			l.drainQueue()
-			req.done <- l.applyConfig(req.cfg)
+			l.handleReload(req)
 		case <-l.stopCh:
-			l.drainQueue()
-			l.mu.Lock()
-			err := flushSinks(l.sinks)
-			if closeErr := closeSinks(l.sinks); err == nil {
-				err = closeErr
-			}
-			l.shutdownErr = err
-			l.sinks = nil
-			l.mu.Unlock()
+			l.handleStop()
 			return
 		}
 	}
 }
 
+// serviceControl drains one pending control message without blocking.
+// Returns true when the worker should exit.
+func (l *Logger) serviceControl() bool {
+	select {
+	case req := <-l.flushCh:
+		l.handleFlush(req)
+	case req := <-l.reloadCh:
+		l.handleReload(req)
+	case <-l.stopCh:
+		l.handleStop()
+		return true
+	default:
+	}
+	return false
+}
+
+func (l *Logger) handleFlush(req flushRequest) {
+	l.drainQueue()
+	l.mu.RLock()
+	err := flushSinks(l.sinks)
+	l.mu.RUnlock()
+	req.done <- err
+}
+
+func (l *Logger) handleReload(req reloadRequest) {
+	// Payloads are already serialized; remaining queue items write to the new
+	// sinks after applyConfig. Avoid unbounded drain under a live flood.
+	l.drainQueue()
+	req.done <- l.applyConfig(req.cfg)
+}
+
+func (l *Logger) handleStop() {
+	l.drainQueue()
+	l.mu.Lock()
+	err := flushSinks(l.sinks)
+	if closeErr := closeSinks(l.sinks); err == nil {
+		err = closeErr
+	}
+	l.shutdownErr = err
+	l.sinks = nil
+	l.mu.Unlock()
+}
+
 func (l *Logger) drainQueue() {
-	for {
+	// Cap iterations so a live producer cannot keep the queue non-empty forever
+	// (reload/flush/stop would otherwise hang).
+	max := cap(l.queue) + 1
+	if max < 1 {
+		max = 1
+	}
+	for i := 0; i < max; i++ {
 		select {
 		case item := <-l.queue:
 			l.stats.queued.Add(-1)

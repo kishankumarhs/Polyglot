@@ -20,7 +20,7 @@ func TestHotReloadUnderLoad(t *testing.T) {
 	}
 	defer log.Close()
 
-	const workers = 100
+	workers := mustEnvInt("BENCH_RELOAD_WORKERS", 100)
 	var stop atomic.Bool
 	var logged atomic.Int64
 	var wg sync.WaitGroup
@@ -46,10 +46,21 @@ func TestHotReloadUnderLoad(t *testing.T) {
 	reloadCfg := cfg
 	reloadCfg.Level = "error"
 	reloadStart := time.Now()
-	if err := log.ReloadConfig(reloadCfg); err != nil {
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- log.ReloadConfig(reloadCfg)
+	}()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			stop.Store(true)
+			wg.Wait()
+			t.Fatalf("reload under load: %v", err)
+		}
+	case <-time.After(15 * time.Second):
 		stop.Store(true)
 		wg.Wait()
-		t.Fatalf("reload under load: %v", err)
+		t.Fatal("reload under load timed out after 15s (control channel starved?)")
 	}
 	reloadUnderLoad := time.Since(reloadStart)
 
@@ -60,8 +71,8 @@ func TestHotReloadUnderLoad(t *testing.T) {
 		t.Fatalf("flush: %v", err)
 	}
 	st := log.Stats()
-	t.Logf("reload_under_load=%s logged=%d flushed=%d dropped=%d",
-		reloadUnderLoad, logged.Load(), st.Flushed, st.Dropped)
+	t.Logf("reload_under_load=%s workers=%d logged=%d flushed=%d dropped=%d",
+		reloadUnderLoad, workers, logged.Load(), st.Flushed, st.Dropped)
 
 	// Quiescent reload latency (capability floor).
 	quiet := cfg

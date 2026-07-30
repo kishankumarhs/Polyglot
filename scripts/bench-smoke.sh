@@ -38,8 +38,9 @@ phase_begin 1 "Go smoke benches"
 (
   cd bench/go
   stream go test -c -o /tmp/polyglot-bench.test 2>&1
-  stream go test -v -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile' -benchtime=50ms -benchmem -count=1 2>&1
-  BENCH_OVERFLOW_N=5000 BENCH_MEM_N=2000 stream go test -v -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 60s 2>&1
+  stream go test -v -run '^$' -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile' -benchtime=50ms -benchmem -count=1 2>&1
+  BENCH_OVERFLOW_N=5000 BENCH_MEM_N=2000 BENCH_RELOAD_WORKERS=8 \
+    stream go test -v -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 60s 2>&1
 )
 phase_end
 

@@ -174,7 +174,7 @@ jobs:
           set -euo pipefail
           mkdir -p bench/results
           cd bench/go
-          go test -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile' \
+          go test -run '^$' -bench='BenchmarkPolyglotSyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile' \
             -benchmem -count=3 -timeout 20m | tee ../results/go-release.txt
           go test -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 10m | tee -a ../results/go-release.txt
           BENCH_SCALE_CSV=1 go test -count=1 -run 'TestScaleCSV' -timeout 10m | tee -a ../results/go-release.txt

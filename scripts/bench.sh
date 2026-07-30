@@ -76,7 +76,10 @@ if [[ "${BENCH_QUICK:-}" == "1" ]]; then
   export BENCH_DOTNET_N="${BENCH_DOTNET_N:-2000}"
   export BENCH_DOTNET_ITERS="${BENCH_DOTNET_ITERS:-1}"
   export BENCH_CROSS_N="${BENCH_CROSS_N:-1000}"
-  echo "BENCH_QUICK=1: count=1, benchtime=200ms, smaller Node/Python/.NET/cross N"
+  export BENCH_RELOAD_WORKERS="${BENCH_RELOAD_WORKERS:-16}"
+  export BENCH_OVERFLOW_N="${BENCH_OVERFLOW_N:-5000}"
+  export BENCH_MEM_N="${BENCH_MEM_N:-10000}"
+  echo "BENCH_QUICK=1: count=1, benchtime=200ms, smaller Node/Python/.NET/cross/reload N"
   echo
 fi
 
@@ -101,7 +104,8 @@ phase_begin 2 "Go benches (zap / zerolog / polyglot)"
 _start_heartbeat
 (
   cd bench/go
-  stream go test -v \
+  # -run '^$' skips package tests; otherwise go test -bench still runs them first.
+  stream go test -v -run '^$' \
     -bench='BenchmarkPolyglotSyncFile|BenchmarkPolyglotAsyncFile|BenchmarkZapJSONFile|BenchmarkZerologFile|BenchmarkSlogJSONFile|BenchmarkPolyglotWithChild|BenchmarkZapWithChild|BenchmarkZerologWithChild|BenchmarkPolyglotMemoryAllocs' \
     -benchmem -count="$GO_COUNT" "${GO_BENCHTIME_ARGS[@]}" -timeout 30m 2>&1 | tee "../../$OUT_GO"
   stream go test -v -count=1 -run 'TestOverflow|TestHotReload|TestMemory' -timeout 10m 2>&1 | tee -a "../../$OUT_GO"
