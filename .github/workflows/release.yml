@@ -29,13 +29,8 @@ jobs:
             arch: x86_64
             goarch: amd64
             lib: liblogger.so
-          # macOS Intel
-          - os: macos
-            runs-on: macos-13
-            target: darwin
-            arch: x86_64
-            goarch: amd64
-            lib: liblogger.dylib
+          # macOS Apple Silicon (Intel macOS-13 runners are often unavailable;
+          # ship arm64 dylib; Rosetta Node still needs a native amd64 build later)
           # macOS Apple Silicon
           - os: macos-arm
             runs-on: macos-14
