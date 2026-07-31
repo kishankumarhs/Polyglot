@@ -156,6 +156,39 @@ func TestCreateConfigServiceFromYAMLOnly(t *testing.T) {
 	}
 }
 
+func TestCreateConfigOverlayQuietSuppressesDiagnostics(t *testing.T) {
+	// Bindings pass quiet in the overlay because Go snapshots the environment at
+	// startup on Unix; POLYGLOT_QUIET set after start would not be seen here.
+	t.Setenv("POLYGLOT_QUIET", "")
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "polyglot.yaml")
+	if err := os.WriteFile(cfgPath, []byte("service: quiet-svc\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	origStderr := os.Stderr
+	os.Stderr = w
+
+	_, _, err = CreateConfigFromFileWithOverrides(cfgPath, []byte(`{"quiet":true}`))
+
+	os.Stderr = origStderr
+	_ = w.Close()
+	var buf [4096]byte
+	n, _ := r.Read(buf[:])
+	_ = r.Close()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n > 0 {
+		t.Fatalf("expected no diagnostics, got %q", string(buf[:n]))
+	}
+}
+
 func TestCreateConfigEmptyServiceFails(t *testing.T) {
 	t.Setenv("POLYGLOT_QUIET", "1")
 	_, _, err := CreateConfigFromFileWithOverrides("", []byte(`{"service":""}`))

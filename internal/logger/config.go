@@ -262,17 +262,42 @@ func ApplyConfigOverlay(base Config, overlayJSON []byte) (Config, error) {
 	return applyRawOverlay(base, raw)
 }
 
-// hasOverlayKeys reports whether overlay JSON sets any fields.
+// hasOverlayKeys reports whether overlay JSON sets any config fields.
 func hasOverlayKeys(overlayJSON []byte) bool {
+	m := overlayKeys(overlayJSON)
+	for k := range m {
+		if k != "quiet" {
+			return true
+		}
+	}
+	return false
+}
+
+func overlayKeys(overlayJSON []byte) map[string]json.RawMessage {
 	trimmed := strings.TrimSpace(string(overlayJSON))
 	if trimmed == "" || trimmed == "{}" || trimmed == "null" {
-		return false
+		return nil
 	}
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(overlayJSON, &m); err != nil {
-		return false
+		return nil
 	}
-	return len(m) > 0
+	return m
+}
+
+// overlayQuiet reads the caller-supplied "quiet" flag. Bindings send this because
+// Go snapshots the environment at startup on Unix, so POLYGLOT_QUIET set after
+// process start would otherwise be ignored.
+func overlayQuiet(overlayJSON []byte) *bool {
+	raw, ok := overlayKeys(overlayJSON)["quiet"]
+	if !ok {
+		return nil
+	}
+	var v bool
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return nil
+	}
+	return &v
 }
 
 // CreateConfigFromFileWithOverrides loads a config file (or discovers one),
@@ -281,7 +306,11 @@ func hasOverlayKeys(overlayJSON []byte) bool {
 // If explicitPath is empty, uses ResolveConfigPath (env → cwd → parents, stop at .git).
 func CreateConfigFromFileWithOverrides(explicitPath string, overlayJSON []byte) (Config, MergeDiag, error) {
 	resolve := ResolveConfigPath(explicitPath)
-	diag := MergeDiag{Resolve: resolve, HadOverlay: hasOverlayKeys(overlayJSON)}
+	diag := MergeDiag{
+		Resolve:       resolve,
+		HadOverlay:    hasOverlayKeys(overlayJSON),
+		QuietOverride: overlayQuiet(overlayJSON),
+	}
 
 	var base Config
 	var err error

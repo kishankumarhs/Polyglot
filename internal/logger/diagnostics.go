@@ -18,11 +18,19 @@ type MergeDiag struct {
 	HadFile    bool
 	HadOverlay bool
 	Config     Config
+	// QuietOverride comes from the caller's overlay. Bindings pass it because Go
+	// snapshots the environment at startup on Unix, so a POLYGLOT_QUIET set after
+	// process start is invisible to os.Getenv here.
+	QuietOverride *bool
 }
 
 // PrintStartupDiagnostics writes a short stderr summary of config resolution.
 func PrintStartupDiagnostics(d MergeDiag) {
-	if quietDiagnostics() {
+	if d.QuietOverride != nil {
+		if *d.QuietOverride {
+			return
+		}
+	} else if quietDiagnostics() {
 		return
 	}
 
