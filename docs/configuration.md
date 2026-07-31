@@ -18,7 +18,8 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
     "maxSizeMB": 100,
     "maxBackups": 10,
     "maxAgeDays": 30,
-    "compress": true
+    "compress": true,
+    "fsync": false
   },
   "http": {
     "enabled": true,
@@ -35,6 +36,23 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
     "flush_interval_ms": 1000,
     "labels": { "job": "workflow-service" }
   },
+  "otlp": {
+    "enabled": false,
+    "url": "https://collector.example/v1/logs",
+    "timeout_ms": 5000,
+    "batch_size": 50,
+    "flush_interval_ms": 1000,
+    "headers": { "Authorization": "Bearer <token>" }
+  },
+  "kafka": {
+    "enabled": false,
+    "brokers": ["kafka-1:9092", "kafka-2:9092"],
+    "topic": "app-logs",
+    "timeout_ms": 5000,
+    "batch_size": 50,
+    "flush_interval_ms": 1000,
+    "required_acks": 1
+  },
   "async": true,
   "queueSize": 10000,
   "overflow": "drop_newest",
@@ -43,62 +61,88 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
 }
 ```
 
-At least one of `stdout`, `file.enabled`, or `http.enabled` / `loki.enabled` must be on.
+At least one of `stdout`, `file.enabled`, `http.enabled`, `loki.enabled`, `otlp.enabled`, or `kafka.enabled` must be on.
 
 ## Field reference
 
 ### Top level
 
-| Key | Type | Default | Notes |
-| --- | ---- | ------- | ----- |
-| `service` | string | `"app"` | Becomes `service_name` on every log line. Required for meaningful queries. |
-| `service_version` | string | `""` | Optional semver / build id |
-| `environment` | string | `""` | e.g. `dev`, `staging`, `prod` |
-| `level` | string | `"info"` | Minimum level: `trace`…`fatal` |
-| `stdout` | bool | `true` | Write JSON lines to process stdout |
-| `file` | object | see below | Rotating file sink |
-| `http` | object | see below | Centralized NDJSON POST sink |
-| `async` | bool | `true` | Background queue (fixed at create) |
-| `queueSize` | int | `10000` | Async queue capacity (fixed at create) |
-| `overflow` | string | `"drop_newest"` | `drop_newest` \| `drop_oldest` \| `block` |
-| `fields` | object | `{}` | Base fields merged into every log |
+| Key               | Type   | Default         | Notes                                                                      |
+| ----------------- | ------ | --------------- | -------------------------------------------------------------------------- |
+| `service`         | string | `"app"`         | Becomes `service_name` on every log line. Required for meaningful queries. |
+| `service_version` | string | `""`            | Optional semver / build id                                                 |
+| `environment`     | string | `""`            | e.g. `dev`, `staging`, `prod`                                              |
+| `level`           | string | `"info"`        | Minimum level: `trace`…`fatal`                                             |
+| `stdout`          | bool   | `true`          | Write JSON lines to process stdout                                         |
+| `file`            | object | see below       | Rotating file sink                                                         |
+| `http`            | object | see below       | Centralized NDJSON POST sink                                               |
+| `otlp`            | object | see below       | Native OTLP/HTTP logs sink                                                 |
+| `kafka`           | object | see below       | Native Kafka topic sink                                                    |
+| `async`           | bool   | `true`          | Background queue (fixed at create)                                         |
+| `queueSize`       | int    | `10000`         | Async queue capacity (fixed at create)                                     |
+| `overflow`        | string | `"drop_newest"` | `drop_newest` \| `drop_oldest` \| `block`                                  |
+| `fields`          | object | `{}`            | Base fields merged into every log                                          |
 
 ### `file`
 
-| Key | Type | Default | Notes |
-| --- | ---- | ------- | ----- |
-| `enabled` | bool | `false` | Must be true to write files |
-| `path` | string | required when enabled | Active log file path |
-| `maxSizeMB` | int | `100` | Rotate when size exceeds this |
-| `maxBackups` | int | `10` | How many rotated files to keep |
-| `maxAgeDays` | int | `30` | Delete backups older than this |
-| `compress` | bool | `false` | Gzip rotated backups (async after rotate) |
+| Key          | Type   | Default               | Notes                                                                            |
+| ------------ | ------ | --------------------- | -------------------------------------------------------------------------------- |
+| `enabled`    | bool   | `false`               | Must be true to write files                                                      |
+| `path`       | string | required when enabled | Active log file path                                                             |
+| `maxSizeMB`  | int    | `100`                 | Rotate when size exceeds this                                                    |
+| `maxBackups` | int    | `10`                  | How many rotated files to keep                                                   |
+| `maxAgeDays` | int    | `30`                  | Delete backups older than this                                                   |
+| `compress`   | bool   | `false`               | Gzip rotated backups (async after rotate)                                        |
+| `fsync`      | bool   | `false`               | Call `fsync` after each file write (stronger crash durability, lower throughput) |
 
 ### `http`
 
-| Key | Type | Default | Notes |
-| --- | ---- | ------- | ----- |
-| `enabled` | bool | `false` | Must be true to ship remotely |
-| `url` | string | required when enabled | Absolute `http://` or `https://` URL with host |
-| `timeout_ms` | int | `5000` | Per-request timeout |
-| `headers` | object | `{}` | Extra HTTP headers (treat values as secrets) |
-| `batch_size` | int | `50` | Lines per POST (also drives retry buffer size) |
-| `flush_interval_ms` | int | `1000` | Periodic flush ticker |
+| Key                 | Type   | Default               | Notes                                          |
+| ------------------- | ------ | --------------------- | ---------------------------------------------- |
+| `enabled`           | bool   | `false`               | Must be true to ship remotely                  |
+| `url`               | string | required when enabled | Absolute `http://` or `https://` URL with host |
+| `timeout_ms`        | int    | `5000`                | Per-request timeout                            |
+| `headers`           | object | `{}`                  | Extra HTTP headers (treat values as secrets)   |
+| `batch_size`        | int    | `50`                  | Lines per POST (also drives retry buffer size) |
+| `flush_interval_ms` | int    | `1000`                | Periodic flush ticker                          |
 
 URL schemes other than `http`/`https`, or URLs without a host, are rejected at validation.
+
+### `otlp`
+
+| Key                 | Type   | Default               | Notes                                        |
+| ------------------- | ------ | --------------------- | -------------------------------------------- |
+| `enabled`           | bool   | `false`               | Must be true to ship OTLP logs               |
+| `url`               | string | required when enabled | Collector base URL or `/v1/logs` endpoint    |
+| `timeout_ms`        | int    | `5000`                | Per-request timeout                          |
+| `headers`           | object | `{}`                  | Extra HTTP headers (treat values as secrets) |
+| `batch_size`        | int    | `50`                  | Lines per OTLP export call                   |
+| `flush_interval_ms` | int    | `1000`                | Periodic flush ticker                        |
+
+### `kafka`
+
+| Key                 | Type     | Default               | Notes                                              |
+| ------------------- | -------- | --------------------- | -------------------------------------------------- |
+| `enabled`           | bool     | `false`               | Must be true to ship to Kafka                      |
+| `brokers`           | string[] | required when enabled | Broker addresses such as `host:9092`               |
+| `topic`             | string   | required when enabled | Topic for serialized JSON lines                    |
+| `timeout_ms`        | int      | `5000`                | Produce timeout                                    |
+| `batch_size`        | int      | `50`                  | Sink-local batch size                              |
+| `flush_interval_ms` | int      | `1000`                | Periodic flush ticker                              |
+| `required_acks`     | int      | `1`                   | `-1` all replicas, `1` leader, `0` fire-and-forget |
 
 ## Legacy flat keys
 
 Still accepted and mapped into the nested schema:
 
-| Legacy | Maps to |
-| ------ | ------- |
-| `service_name` | `service` |
-| `min_level` | `level` |
-| `file_path` | `file.path` (+ enables file) |
-| `max_size_mb` | `file.maxSizeMB` |
-| `max_backups` | `file.maxBackups` |
-| `max_age_days` | `file.maxAgeDays` |
+| Legacy         | Maps to                      |
+| -------------- | ---------------------------- |
+| `service_name` | `service`                    |
+| `min_level`    | `level`                      |
+| `file_path`    | `file.path` (+ enables file) |
+| `max_size_mb`  | `file.maxSizeMB`             |
+| `max_backups`  | `file.maxBackups`            |
+| `max_age_days` | `file.maxAgeDays`            |
 
 Prefer the nested form for new services.
 
@@ -161,11 +205,11 @@ Replace the bearer token from the environment or a secret store — do not commi
 
 ## Hot reload vs recreate
 
-| Change | Hot reload | Need new logger |
-| ------ | ---------- | --------------- |
-| Level, fields, overflow | Yes | No |
-| Enable/disable or retarget sinks | Yes | No |
-| `async` on/off | No | Yes |
-| `queueSize` | No | Yes |
+| Change                           | Hot reload | Need new logger |
+| -------------------------------- | ---------- | --------------- |
+| Level, fields, overflow          | Yes        | No              |
+| Enable/disable or retarget sinks | Yes        | No              |
+| `async` on/off                   | No         | Yes             |
+| `queueSize`                      | No         | Yes             |
 
 See [user-guide.md](user-guide.md) · [sinks.md](sinks.md).

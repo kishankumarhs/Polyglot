@@ -14,6 +14,9 @@ func newFileSink(cfg *FileConfig) (*fileSink, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cfg.FSync {
+		rw.fsync = true
+	}
 	return &fileSink{w: rw}, nil
 }
 

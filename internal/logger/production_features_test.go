@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestWithChildLoggerDoesNotRaceParentFields(t *testing.T) {
@@ -63,6 +65,40 @@ func TestLogContextTraceFields(t *testing.T) {
 	data, _ := os.ReadFile(cfg.File.Path)
 	if !strings.Contains(string(data), `"trace_id":"trace-1"`) || !strings.Contains(string(data), `"span_id":"span-9"`) {
 		t.Fatalf("missing trace fields: %s", data)
+	}
+}
+
+func TestLogContextActiveSpanFields(t *testing.T) {
+	cfg := fileOnlyConfig(t, filepath.Join(t.TempDir(), "otel.log"))
+	cfg.Async = false
+	log, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer log.Close()
+
+	traceID, err := trace.TraceIDFromHex("00112233445566778899aabbccddeeff")
+	if err != nil {
+		t.Fatal(err)
+	}
+	spanID, err := trace.SpanIDFromHex("1122334455667788")
+	if err != nil {
+		t.Fatal(err)
+	}
+	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
+
+	if err := log.LogContext(ctx, LevelInfo, "traced-otel", nil); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(cfg.File.Path)
+	body := string(data)
+	if !strings.Contains(body, `"trace_id":"00112233445566778899aabbccddeeff"`) || !strings.Contains(body, `"span_id":"1122334455667788"`) {
+		t.Fatalf("missing otel span fields: %s", body)
 	}
 }
 

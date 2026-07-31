@@ -15,14 +15,14 @@ Go core owns formatting, queueing, and shipping. Bindings are thin FFI wrappers.
 
 ## Levels
 
-| Level | Int | Use |
-| --- | --- | --- |
-| `trace` | 0 | Verbose diagnostics |
-| `debug` | 1 | Dev detail |
-| `info` | 2 | Normal ops |
-| `warn` | 3 | Recoverable surprise |
-| `error` | 4 | Needs attention |
-| `fatal` | 5 | Label only — does not exit |
+| Level   | Int | Use                        |
+| ------- | --- | -------------------------- |
+| `trace` | 0   | Verbose diagnostics        |
+| `debug` | 1   | Dev detail                 |
+| `info`  | 2   | Normal ops                 |
+| `warn`  | 3   | Recoverable surprise       |
+| `error` | 4   | Needs attention            |
+| `fatal` | 5   | Label only — does not exit |
 
 Floor: `"level": "info"`. Exit yourself if you need process death on fatal.
 
@@ -40,18 +40,20 @@ For request scope use `With` / `with` / `with_fields`, not a shared mutable cont
 
 Default `async: true`: serialize, enqueue, return. Worker writes sinks.
 
-| Mode | Throughput | Durability |
-| --- | --- | --- |
-| `async: true` (default) | Highest | In-flight queue / HTTP buffer can be lost on crash; call `flush` + `close` on shutdown |
-| `async: false` | Lower | Each log waits for sinks; stronger durability for process crashes after return |
+| Mode                    | Throughput | Durability                                                                             |
+| ----------------------- | ---------- | -------------------------------------------------------------------------------------- |
+| `async: true` (default) | Highest    | In-flight queue / HTTP buffer can be lost on crash; call `flush` + `close` on shutdown |
+| `async: false`          | Lower      | Each log waits for sinks; stronger durability for process crashes after return         |
+
+For file workloads, `file.fsync: true` adds an explicit per-write `fsync` path for stronger crash durability at the cost of latency and throughput.
 
 This is a deliberate trade-off (same pattern as many production loggers). Choose per workload — latency-sensitive services usually keep async; audit-critical paths may prefer sync or explicit flush.
 
-| `overflow` | When full |
-| --- | --- |
-| `drop_newest` | Drop the new entry |
+| `overflow`    | When full                     |
+| ------------- | ----------------------------- |
+| `drop_newest` | Drop the new entry            |
 | `drop_oldest` | Drop one queued, then enqueue |
-| `block` | Wait for space |
+| `block`       | Wait for space                |
 
 `queueSize` and `async` are fixed at create. Level, sinks, overflow, and fields can hot-reload.
 
@@ -59,9 +61,9 @@ See also [troubleshooting — logs missing after crash](troubleshooting.md#logs-
 
 ## Flush & close
 
-| Call | Behavior |
-| --- | --- |
-| `flush` | Drain queue + sync sinks |
+| Call                | Behavior                        |
+| ------------------- | ------------------------------- |
+| `flush`             | Drain queue + sync sinks        |
 | `close` / `Dispose` | Stop worker, flush, close sinks |
 
 Check close errors on shutdown so the last HTTP batch isn't lost.

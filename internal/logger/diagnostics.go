@@ -70,6 +70,13 @@ func PrintStartupDiagnostics(d MergeDiag) {
 	if d.Config.LokiEnabled() {
 		fmt.Fprintf(os.Stderr, "loki: enabled (%s)\n", d.Config.Loki.URL)
 	}
+	if d.Config.OTLPEnabled() {
+		fmt.Fprintf(os.Stderr, "otlp: enabled (%s batch_size=%d flush_interval_ms=%d)\n",
+			d.Config.OTLP.URL, d.Config.OTLP.BatchSize, d.Config.OTLP.FlushIntervalMS)
+	}
+	if d.Config.KafkaEnabled() {
+		fmt.Fprintf(os.Stderr, "kafka: enabled (topic=%s brokers=%d)\n", d.Config.Kafka.Topic, len(d.Config.Kafka.Brokers))
+	}
 	fmt.Fprintln(os.Stderr)
 }
 

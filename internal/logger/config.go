@@ -30,6 +30,7 @@ type FileConfig struct {
 	MaxBackups int    `json:"maxBackups"`
 	MaxAgeDays int    `json:"maxAgeDays"`
 	Compress   bool   `json:"compress"`
+	FSync      bool   `json:"fsync"`
 }
 
 // HTTPConfig configures the centralized HTTP log sink (NDJSON POST body).
@@ -55,6 +56,27 @@ type LokiConfig struct {
 	Labels map[string]string `json:"labels"`
 }
 
+// OTLPConfig configures a native OTLP/HTTP logs sink.
+type OTLPConfig struct {
+	Enabled         bool              `json:"enabled"`
+	URL             string            `json:"url"`
+	TimeoutMS       int               `json:"timeout_ms"`
+	Headers         map[string]string `json:"headers"`
+	BatchSize       int               `json:"batch_size"`
+	FlushIntervalMS int               `json:"flush_interval_ms"`
+}
+
+// KafkaConfig configures a native Kafka sink.
+type KafkaConfig struct {
+	Enabled         bool     `json:"enabled"`
+	Brokers         []string `json:"brokers"`
+	Topic           string   `json:"topic"`
+	TimeoutMS       int      `json:"timeout_ms"`
+	BatchSize       int      `json:"batch_size"`
+	FlushIntervalMS int      `json:"flush_interval_ms"`
+	RequiredAcks    int      `json:"required_acks"` // -1=all, 1=leader, 0=none
+}
+
 // SamplingConfig is zap-style first-N-then-every sampling per level+message.
 type SamplingConfig struct {
 	Enabled    bool `json:"enabled"`
@@ -75,6 +97,8 @@ type Config struct {
 	File           *FileConfig     `json:"file,omitempty"`
 	HTTP           *HTTPConfig     `json:"http,omitempty"`
 	Loki           *LokiConfig     `json:"loki,omitempty"`
+	OTLP           *OTLPConfig     `json:"otlp,omitempty"`
+	Kafka          *KafkaConfig    `json:"kafka,omitempty"`
 	Async          bool            `json:"async"`
 	QueueSize      int             `json:"queueSize"`
 	Overflow       string          `json:"overflow"`
@@ -114,6 +138,20 @@ func DefaultConfig() Config {
 			Headers:         map[string]string{},
 			Labels:          map[string]string{},
 		},
+		OTLP: &OTLPConfig{
+			Enabled:         false,
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			Headers:         map[string]string{},
+		},
+		Kafka: &KafkaConfig{
+			Enabled:         false,
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			RequiredAcks:    1,
+		},
 		Fields: map[string]any{},
 	}
 }
@@ -136,6 +174,8 @@ type rawConfig struct {
 	MaxAgeDays     int             `json:"max_age_days"`
 	HTTP           *HTTPConfig     `json:"http"`
 	Loki           *LokiConfig     `json:"loki"`
+	OTLP           *OTLPConfig     `json:"otlp"`
+	Kafka          *KafkaConfig    `json:"kafka"`
 	Async          *bool           `json:"async"`
 	QueueSize      int             `json:"queueSize"`
 	Overflow       string          `json:"overflow"`
@@ -222,6 +262,12 @@ func applyRawOverlay(base Config, raw rawConfig) (Config, error) {
 	}
 	if raw.Loki != nil {
 		cfg.Loki = raw.Loki
+	}
+	if raw.OTLP != nil {
+		cfg.OTLP = raw.OTLP
+	}
+	if raw.Kafka != nil {
+		cfg.Kafka = raw.Kafka
 	}
 
 	return cfg, nil
@@ -422,11 +468,78 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	if c.Kafka == nil {
+		c.Kafka = &KafkaConfig{
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			RequiredAcks:    1,
+		}
+	}
+	if c.Kafka.Enabled {
+		if len(c.Kafka.Brokers) == 0 {
+			return fmt.Errorf("kafka.brokers is required when kafka sink is enabled")
+		}
+		for _, broker := range c.Kafka.Brokers {
+			if strings.TrimSpace(broker) == "" {
+				return fmt.Errorf("kafka.brokers contains an empty broker")
+			}
+		}
+		if strings.TrimSpace(c.Kafka.Topic) == "" {
+			return fmt.Errorf("kafka.topic is required when kafka sink is enabled")
+		}
+		if c.Kafka.TimeoutMS <= 0 {
+			c.Kafka.TimeoutMS = 5000
+		}
+		if c.Kafka.BatchSize <= 0 {
+			c.Kafka.BatchSize = 50
+		}
+		if c.Kafka.FlushIntervalMS <= 0 {
+			c.Kafka.FlushIntervalMS = 1000
+		}
+		switch c.Kafka.RequiredAcks {
+		case -1, 0, 1:
+		default:
+			return fmt.Errorf("kafka.required_acks must be -1, 0, or 1")
+		}
+	}
+
+	if c.OTLP == nil {
+		c.OTLP = &OTLPConfig{
+			TimeoutMS:       5000,
+			BatchSize:       50,
+			FlushIntervalMS: 1000,
+			Headers:         map[string]string{},
+		}
+	}
+	if c.OTLP.Headers == nil {
+		c.OTLP.Headers = map[string]string{}
+	}
+	if c.OTLP.Enabled {
+		if strings.TrimSpace(c.OTLP.URL) == "" {
+			return fmt.Errorf("otlp.url is required when otlp sink is enabled")
+		}
+		if err := validateCollectorURL(c.OTLP.URL); err != nil {
+			return err
+		}
+		if c.OTLP.TimeoutMS <= 0 {
+			c.OTLP.TimeoutMS = 5000
+		}
+		if c.OTLP.BatchSize <= 0 {
+			c.OTLP.BatchSize = 50
+		}
+		if c.OTLP.FlushIntervalMS <= 0 {
+			c.OTLP.FlushIntervalMS = 1000
+		}
+	}
+
 	fileEnabled := c.FileEnabled()
 	httpEnabled := c.HTTPEnabled()
 	lokiEnabled := c.LokiEnabled()
-	if !c.Stdout && !fileEnabled && !httpEnabled && !lokiEnabled {
-		return fmt.Errorf("at least one sink must be enabled (stdout, file, http, or loki)")
+	otlpEnabled := c.OTLPEnabled()
+	kafkaEnabled := c.KafkaEnabled()
+	if !c.Stdout && !fileEnabled && !httpEnabled && !lokiEnabled && !otlpEnabled && !kafkaEnabled {
+		return fmt.Errorf("at least one sink must be enabled (stdout, file, http, loki, otlp, or kafka)")
 	}
 
 	if c.File == nil {
@@ -509,6 +622,7 @@ func (c *Config) Validate() error {
 			c.Loki.FlushIntervalMS = 1000
 		}
 	}
+
 	return nil
 }
 
@@ -531,6 +645,16 @@ func (c Config) HTTPEnabled() bool {
 // LokiEnabled reports whether the Loki sink should be active.
 func (c Config) LokiEnabled() bool {
 	return c.Loki != nil && c.Loki.Enabled && strings.TrimSpace(c.Loki.URL) != ""
+}
+
+// OTLPEnabled reports whether the OTLP sink should be active.
+func (c Config) OTLPEnabled() bool {
+	return c.OTLP != nil && c.OTLP.Enabled && strings.TrimSpace(c.OTLP.URL) != ""
+}
+
+// KafkaEnabled reports whether the Kafka sink should be active.
+func (c Config) KafkaEnabled() bool {
+	return c.Kafka != nil && c.Kafka.Enabled && len(c.Kafka.Brokers) > 0 && strings.TrimSpace(c.Kafka.Topic) != ""
 }
 
 // MinLevelValue returns the parsed minimum level.
