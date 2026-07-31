@@ -72,7 +72,7 @@ At least one of `stdout`, `file.enabled`, or `http.enabled` / `loki.enabled` mus
 | `maxSizeMB` | int | `100` | Rotate when size exceeds this |
 | `maxBackups` | int | `10` | How many rotated files to keep |
 | `maxAgeDays` | int | `30` | Delete backups older than this |
-| `compress` | bool | `false` | Accepted but **not implemented** yet |
+| `compress` | bool | `false` | Gzip rotated backups (async after rotate) |
 
 ### `http`
 

@@ -13,7 +13,7 @@ Shared logging core (Go) + C ABI + bindings for Python, Node, and .NET.
 - [Sinks](sinks.md)
 - [Benchmarks](../bench/README.md)
 - [Compatibility](compatibility.md)
-- [ABI mismatch policy](compatibility-policy.md)
+- [Compatibility guarantees & ABI](compatibility-policy.md)
 - [v1.0 checklist](../V1-CHECKLIST.md)
 
 ## Migrations

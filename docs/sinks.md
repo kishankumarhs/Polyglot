@@ -17,7 +17,7 @@ Good for containers and local dev.
 
 ## File
 
-Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups.
+Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups asynchronously after rotate.
 
 ## HTTP
 
