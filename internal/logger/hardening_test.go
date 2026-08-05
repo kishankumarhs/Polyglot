@@ -9,6 +9,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+
+	collogspb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 func httpOnlyConfig(t *testing.T, url string) Config {
@@ -24,6 +27,23 @@ func httpOnlyConfig(t *testing.T, url string) Config {
 		TimeoutMS:       2000,
 		BatchSize:       2,
 		FlushIntervalMS: 10_000, // long, so tests drive flushes explicitly
+	}
+	return cfg
+}
+
+func otlpOnlyConfig(t *testing.T, url string) Config {
+	t.Helper()
+	cfg := DefaultConfig()
+	cfg.Service = "hardening"
+	cfg.Stdout = false
+	cfg.Async = false
+	cfg.File = &FileConfig{Enabled: false}
+	cfg.OTLP = &OTLPConfig{
+		Enabled:         true,
+		URL:             url,
+		TimeoutMS:       2000,
+		BatchSize:       2,
+		FlushIntervalMS: 10_000,
 	}
 	return cfg
 }
@@ -269,6 +289,82 @@ func TestHTTPHeaderSecretsNeverLeak(t *testing.T) {
 	}
 }
 
+func TestOTLPSinkRetainsBatchOnFailure(t *testing.T) {
+	var (
+		mu     sync.Mutex
+		bodies [][]byte
+		fail   atomic.Bool
+	)
+	fail.Store(true)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if fail.Load() {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		bodies = append(bodies, body)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	log, err := New(otlpOnlyConfig(t, srv.URL))
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer log.Close()
+
+	_ = log.Info("first", nil)
+	_ = log.Info("second", nil)
+
+	if err := log.Flush(); err == nil {
+		t.Fatal("expected flush error while collector is failing")
+	}
+
+	sink := otlpSinkOf(t, log)
+	if got := sink.Buffered(); got == 0 {
+		t.Fatal("batch was discarded after a failed POST; logs would be lost")
+	}
+
+	fail.Store(false)
+	if err := log.Flush(); err != nil {
+		t.Fatalf("Flush after recovery: %v", err)
+	}
+	if got := sink.Buffered(); got != 0 {
+		t.Fatalf("expected buffer drained after success, still holding %d", got)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(bodies) == 0 {
+		t.Fatal("expected at least one OTLP request body")
+	}
+
+	var req collogspb.ExportLogsServiceRequest
+	if err := proto.Unmarshal(bodies[0], &req); err != nil {
+		t.Fatalf("unmarshal otlp request: %v", err)
+	}
+	foundFirst := false
+	foundSecond := false
+	for _, rl := range req.ResourceLogs {
+		for _, sl := range rl.ScopeLogs {
+			for _, lr := range sl.LogRecords {
+				if lr.Body.GetStringValue() == "first" {
+					foundFirst = true
+				}
+				if lr.Body.GetStringValue() == "second" {
+					foundSecond = true
+				}
+			}
+		}
+	}
+	if !foundFirst || !foundSecond {
+		t.Fatalf("otlp payload missing expected bodies: first=%v second=%v", foundFirst, foundSecond)
+	}
+}
+
 func httpSinkOf(t *testing.T, l *Logger) *httpSink {
 	t.Helper()
 	l.mu.RLock()
@@ -279,5 +375,18 @@ func httpSinkOf(t *testing.T, l *Logger) *httpSink {
 		}
 	}
 	t.Fatal("logger has no http sink")
+	return nil
+}
+
+func otlpSinkOf(t *testing.T, l *Logger) *otlpSink {
+	t.Helper()
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	for _, s := range l.sinks {
+		if os, ok := s.(*otlpSink); ok {
+			return os
+		}
+	}
+	t.Fatal("logger has no otlp sink")
 	return nil
 }

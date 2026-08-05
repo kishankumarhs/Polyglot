@@ -51,7 +51,14 @@ Check `stats()` after a few logs + `flush()`. On shutdown, check `close()` for e
 
 ## Logs missing after crash
 
-Async can leave lines in the queue or HTTP buffer. Prefer `flush` + `close` on shutdown, or `"async": false` if you need crash durability.
+Deliberate trade-off:
+
+| Mode | Behavior |
+| --- | --- |
+| `async: true` (default) | Highest throughput; lines still in the queue or HTTP buffer can be lost on hard crash |
+| `async: false` | Lower throughput; wait for sinks before return — stronger durability after the call completes |
+
+Prefer `flush` + `close` on graceful shutdown either way. Do not treat “async + no flush” as crash-safe.
 
 ## `fatal` did not exit
 

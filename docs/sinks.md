@@ -19,7 +19,7 @@ Good for containers and local dev.
 
 ## File
 
-Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups. `fsync: true` syncs each write for stronger crash durability (with lower throughput).
+Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups asynchronously after rotate. Set `fsync: true` for stronger crash durability on each write (with lower throughput).
 
 ## HTTP
 
@@ -110,9 +110,9 @@ App ──HTTP NDJSON──► Vector/Alloy ──► Loki
 App ──file──► Promtail/Alloy ──► Loki   (uses local disk)
 ```
 
-## OTLP
+## Kafka
 
-Exports logs to an OpenTelemetry collector over OTLP/HTTP protobuf. Batching, flush cadence, retry, and bounded buffering follow the same lifecycle model as HTTP/Loki/Kafka sinks.
+Writes serialized log lines to a Kafka topic. Each message contains one JSON line (without a trailing newline in the Kafka payload). Delivery acknowledgement follows `required_acks`.
 
 ```json
 {
@@ -136,6 +136,13 @@ Publishes logs to Kafka. Each message contains one serialized JSON log line.
 {
   "service": "payments-api",
   "stdout": false,
+  "otlp": {
+    "enabled": true,
+    "url": "https://collector.example/v1/logs",
+    "batch_size": 100,
+    "flush_interval_ms": 1000,
+    "headers": { "Authorization": "Bearer <token>" }  
+   },
   "kafka": {
     "enabled": true,
     "brokers": ["kafka-1:9092", "kafka-2:9092"],
@@ -154,8 +161,8 @@ Publishes logs to Kafka. Each message contains one serialized JSON log line.
 | Don't fill VM disks      | Disable file; enable `loki` or `http`  |
 | Grafana                  | Native `loki`, or HTTP → Vector → Loki |
 | OpenTelemetry backend    | Use `otlp` sink                        |
-| Existing Kafka pipeline  | Use native `kafka` sink                |
 | Already run Vector/Alloy | HTTP NDJSON + recipe above             |
+| Existing Kafka pipeline  | Use native `kafka` sink                |
 | Air-gapped               | File + `compress` + tight rotation     |
 
 See [configuration.md](configuration.md) · [troubleshooting.md](troubleshooting.md).

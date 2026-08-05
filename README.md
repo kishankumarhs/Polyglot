@@ -1,6 +1,8 @@
 # Polyglot
 
-A shared logging core written in Go, with thin bindings for Node, Python, and .NET. Same `polyglot.yaml`, same JSON shape, same sinks — whether you're in one language or four.
+**Polyglot is a production logging platform that brings one logging engine, one configuration model, and one operational experience to Node.js, Python, .NET, and Go.**
+
+Same `polyglot.yaml`, same sinks, same async queue / overflow / sampling / hot reload — whether you run one language or four.
 
 ## Install
 
@@ -52,7 +54,15 @@ Side-by-side APIs: [sdk.md](docs/sdk.md) · First log: [first-log.md](docs/first
 
 ## Why use it?
 
-If you only write Go, use Zap. If you only write Node, use Pino. Polyglot is for stacks that mix languages and want one ops model — shared config, Loki/HTTP shipping, async queue, overflow policy, hot reload — without reimplementing that three times.
+If you only write Go, use Zap. If you only write Node, use Pino. Polyglot is not trying to win a single-language speed contest — it standardizes logging across polyglot stacks so platform teams do not normalize four different configs, field names, sinks, and overflow behaviors.
+
+One shared engine means identical:
+
+- sinks (stdout, rotating file, HTTP, Loki)
+- reload, queue, overflow, and sampling
+- JSON schema and lifecycle (`flush` / `close`)
+
+across Node, Python, .NET, and Go.
 
 ## Benchmarks
 
@@ -82,7 +92,7 @@ make build-native && make bench
 - [User guide](docs/user-guide.md)
 - [Configuration](docs/configuration.md)
 - [Sinks & Loki](docs/sinks.md)
-- [Compatibility](docs/compatibility.md)
+- [Compatibility](docs/compatibility.md) · [Compatibility guarantees](docs/compatibility-policy.md)
 - [Migrate from Pino](docs/migrate-from-pino.md) · [Zap](docs/migrate-from-zap.md) · [Serilog](docs/migrate-from-serilog.md) · [Python logging](docs/migrate-from-python-logging.md)
 - Full index: [docs/](docs/README.md)
 

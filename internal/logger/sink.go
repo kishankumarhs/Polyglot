@@ -18,9 +18,7 @@ type bufferedSink interface {
 }
 
 // Future sink interfaces (not implemented):
-//   - KafkaSink
 //   - SyslogSink
-//   - OTelSink
 
 func buildSinks(cfg Config) ([]Sink, error) {
 	var sinks []Sink
@@ -49,6 +47,22 @@ func buildSinks(cfg Config) ([]Sink, error) {
 			return nil, fmt.Errorf("loki sink: %w", err)
 		}
 		sinks = append(sinks, ls)
+	}
+	if cfg.OTLPEnabled() {
+		os, err := newOTLPSink(cfg.OTLP)
+		if err != nil {
+			_ = closeSinks(sinks)
+			return nil, fmt.Errorf("otlp sink: %w", err)
+		}
+		sinks = append(sinks, os)
+	}
+	if cfg.KafkaEnabled() {
+		ks, err := newKafkaSink(cfg.Kafka)
+		if err != nil {
+			_ = closeSinks(sinks)
+			return nil, fmt.Errorf("kafka sink: %w", err)
+		}
+		sinks = append(sinks, ks)
 	}
 	if len(sinks) == 0 {
 		return nil, fmt.Errorf("no sinks configured")

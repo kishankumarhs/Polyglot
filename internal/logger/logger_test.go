@@ -40,7 +40,7 @@ func TestConfigNestedAndLegacy(t *testing.T) {
 		"environment":"prod",
 		"level":"info",
 		"stdout":false,
-		"file":{"enabled":true,"path":"./logs/app.log","maxSizeMB":50,"maxBackups":3,"maxAgeDays":7,"compress":false},
+		"file":{"enabled":true,"path":"./logs/app.log","maxSizeMB":50,"maxBackups":3,"maxAgeDays":7,"compress":false,"fsync":true},
 		"http":{"enabled":false,"url":"http://collector/v1/logs"},
 		"async":true,
 		"queueSize":100,
@@ -56,6 +56,9 @@ func TestConfigNestedAndLegacy(t *testing.T) {
 	}
 	if cfg.Overflow != OverflowDropOldest || cfg.QueueSize != 100 {
 		t.Fatalf("unexpected async cfg: %+v", cfg)
+	}
+	if !cfg.File.FSync {
+		t.Fatalf("expected file.fsync to parse true")
 	}
 
 	legacy := []byte(`{
@@ -97,6 +100,44 @@ func TestConfigValidation(t *testing.T) {
 
 	if _, err := ParseConfigJSON([]byte(`{"service":"","stdout":true}`)); err == nil {
 		t.Fatal("expected explicit empty service to fail")
+	}
+}
+
+func TestKafkaConfigValidation(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Service = "kafka-check"
+	cfg.Stdout = false
+	cfg.File = &FileConfig{Enabled: false}
+	cfg.Kafka = &KafkaConfig{Enabled: true, Topic: "", Brokers: []string{"localhost:9092"}}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected kafka.topic validation error")
+	}
+
+	cfg.Kafka.Topic = "logs"
+	cfg.Kafka.RequiredAcks = 2
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected kafka.required_acks validation error")
+	}
+
+	cfg.Kafka.RequiredAcks = 1
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected valid kafka config: %v", err)
+	}
+}
+
+func TestOTLPConfigValidation(t *testing.T) {
+	cfg := DefaultConfig()
+	cfg.Service = "otlp-check"
+	cfg.Stdout = false
+	cfg.File = &FileConfig{Enabled: false}
+	cfg.OTLP = &OTLPConfig{Enabled: true, URL: ""}
+	if err := cfg.Validate(); err == nil {
+		t.Fatal("expected otlp.url validation error")
+	}
+
+	cfg.OTLP.URL = "https://collector.internal/v1/logs"
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("expected valid otlp config: %v", err)
 	}
 }
 
@@ -590,6 +631,31 @@ func TestRotation(t *testing.T) {
 	}
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("active log missing: %v", err)
+	}
+}
+
+func TestFileFSyncMode(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "fsync.log")
+
+	cfg := fileOnlyConfig(t, path)
+	cfg.File.FSync = true
+	log, err := New(cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer log.Close()
+
+	if err := log.Info("durable", map[string]any{"k": "v"}); err != nil {
+		t.Fatalf("Info: %v", err)
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if !strings.Contains(string(data), `"message":"durable"`) {
+		t.Fatalf("expected fsync file write to be visible, got: %s", string(data))
 	}
 }
 

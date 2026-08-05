@@ -41,9 +41,9 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
     "enabled": false,
     "url": "https://collector.example/v1/logs",
     "timeout_ms": 5000,
-    "headers": { "Authorization": "Bearer <token>" },
     "batch_size": 50,
-    "flush_interval_ms": 1000
+    "flush_interval_ms": 1000,
+    "headers": { "Authorization": "Bearer <token>" }
   },
   "kafka": {
     "enabled": false,
@@ -62,7 +62,7 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
 }
 ```
 
-At least one of `stdout`, `file.enabled`, or `http.enabled` / `loki.enabled` must be on.
+At least one of `stdout`, `file.enabled`, `http.enabled`, `loki.enabled`, `otlp.enabled`, or `kafka.enabled` must be on.
 
 ## Field reference
 

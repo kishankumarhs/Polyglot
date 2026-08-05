@@ -3,9 +3,8 @@
 
 service: polyglot-app
 service_version: "1.0.0"
-environment: dev
+environment: prod
 level: info
-
 stdout: true
 stdout_format: json
 caller: false
@@ -14,29 +13,51 @@ strict: false
 file:
   enabled: false
   path: ./logs/app.log
-  max_size_mb: 100
-  max_backups: 10
-  max_age_days: 30
+  maxSizeMB: 100
+  maxBackups: 10
+  maxAgeDays: 30
   compress: true
+  fsync: false
 
 http:
   enabled: false
   url: https://collector.example/v1/logs
   timeout_ms: 5000
+  headers:
+    Authorization: "Bearer <token>"
   batch_size: 50
   flush_interval_ms: 1000
 
 loki:
   enabled: false
   url: http://loki:3100/loki/api/v1/push
-  timeout_ms: 5000
   batch_size: 50
   flush_interval_ms: 1000
   labels:
-    job: polyglot-app
+    job: workflow-service
+
+otlp:
+  enabled: false
+  url: https://collector.example/v1/logs
+  timeout_ms: 5000
+  batch_size: 50
+  flush_interval_ms: 1000
+  headers:
+    Authorization: "Bearer <token>"
+
+kafka:
+  enabled: false
+  brokers:
+    - kafka-1:9092
+    - kafka-2:9092
+  topic: app-logs
+  timeout_ms: 5000
+  batch_size: 50
+  flush_interval_ms: 1000
+  required_acks: 1
 
 async: true
-queue_size: 10000
+queueSize: 10000
 overflow: drop_newest
 
 sampling:
@@ -45,5 +66,4 @@ sampling:
   thereafter: 100
 
 fields:
-  region: us-east-1
-  cluster: prod
+  region: ap-south-1

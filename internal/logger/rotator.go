@@ -20,6 +20,7 @@ type rotatingWriter struct {
 	maxBackups int
 	maxAge     time.Duration
 	compress   bool
+	fsync      bool
 	size       int64
 	file       *os.File
 	closed     bool
@@ -61,6 +62,14 @@ func (w *rotatingWriter) Write(p []byte) (int, error) {
 
 	n, err := w.file.Write(p)
 	w.size += int64(n)
+	if err != nil {
+		return n, err
+	}
+	if w.fsync {
+		if syncErr := w.file.Sync(); syncErr != nil {
+			return n, syncErr
+		}
+	}
 	return n, err
 }
 

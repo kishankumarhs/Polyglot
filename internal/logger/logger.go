@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -220,7 +222,47 @@ func (l *Logger) LogContext(ctx context.Context, level Level, message string, fi
 			merged["span_id"] = fmt.Sprint(v)
 		}
 	}
+	if _, ok := merged["trace_id"]; !ok || merged["trace_id"] == "" {
+		if traceID, ok := traceIDFromContext(ctx); ok {
+			merged["trace_id"] = traceID
+		}
+	}
+	if _, ok := merged["span_id"]; !ok || merged["span_id"] == "" {
+		if spanID, ok := spanIDFromContext(ctx); ok {
+			merged["span_id"] = spanID
+		}
+	}
 	return l.logAt(level, message, merged, 3)
+}
+
+func traceIDFromContext(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	span := trace.SpanFromContext(ctx)
+	if span == nil {
+		return "", false
+	}
+	sc := span.SpanContext()
+	if !sc.IsValid() || !sc.TraceID().IsValid() {
+		return "", false
+	}
+	return sc.TraceID().String(), true
+}
+
+func spanIDFromContext(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	span := trace.SpanFromContext(ctx)
+	if span == nil {
+		return "", false
+	}
+	sc := span.SpanContext()
+	if !sc.IsValid() || !sc.SpanID().IsValid() {
+		return "", false
+	}
+	return sc.SpanID().String(), true
 }
 
 // LogError logs at error level and attaches err under fields["error"].
