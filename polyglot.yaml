@@ -20,7 +20,7 @@ file:
   fsync: false
 
 http:
-  enabled: true
+  enabled: false
   url: https://collector.example/v1/logs
   timeout_ms: 5000
   headers:
