@@ -11,7 +11,7 @@ caller: false
 strict: false
 
 file:
-  enabled: true
+  enabled: false
   path: ./logs/app.log
   maxSizeMB: 100
   maxBackups: 10

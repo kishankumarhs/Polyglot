@@ -32,6 +32,7 @@ JSON object passed to `logger_create_v1` (or built by bindings). Nested schema b
   "loki": {
     "enabled": false,
     "url": "http://loki:3100/loki/api/v1/push",
+    "timeout_ms": 5000,
     "batch_size": 50,
     "flush_interval_ms": 1000,
     "labels": { "job": "workflow-service" }
@@ -76,8 +77,9 @@ At least one of `stdout`, `file.enabled`, `http.enabled`, `loki.enabled`, `otlp.
 | `stdout`          | bool   | `true`          | Write JSON lines to process stdout                                         |
 | `file`            | object | see below       | Rotating file sink                                                         |
 | `http`            | object | see below       | Centralized NDJSON POST sink                                               |
-| `otlp`            | object | see below       | Native OTLP/HTTP logs sink                                                 |
-| `kafka`           | object | see below       | Native Kafka topic sink                                                    |
+| `loki`            | object | see below       | Native Loki push sink                                                      |
+| `otlp`            | object | see below       | OTLP/HTTP protobuf sink                                                    |
+| `kafka`           | object | see below       | Native Kafka sink                                                          |
 | `async`           | bool   | `true`          | Background queue (fixed at create)                                         |
 | `queueSize`       | int    | `10000`         | Async queue capacity (fixed at create)                                     |
 | `overflow`        | string | `"drop_newest"` | `drop_newest` \| `drop_oldest` \| `block`                                  |
@@ -85,15 +87,15 @@ At least one of `stdout`, `file.enabled`, `http.enabled`, `loki.enabled`, `otlp.
 
 ### `file`
 
-| Key          | Type   | Default               | Notes                                                                            |
-| ------------ | ------ | --------------------- | -------------------------------------------------------------------------------- |
-| `enabled`    | bool   | `false`               | Must be true to write files                                                      |
-| `path`       | string | required when enabled | Active log file path                                                             |
-| `maxSizeMB`  | int    | `100`                 | Rotate when size exceeds this                                                    |
-| `maxBackups` | int    | `10`                  | How many rotated files to keep                                                   |
-| `maxAgeDays` | int    | `30`                  | Delete backups older than this                                                   |
-| `compress`   | bool   | `false`               | Gzip rotated backups (async after rotate)                                        |
-| `fsync`      | bool   | `false`               | Call `fsync` after each file write (stronger crash durability, lower throughput) |
+| Key          | Type   | Default               | Notes                                                      |
+| ------------ | ------ | --------------------- | ---------------------------------------------------------- |
+| `enabled`    | bool   | `false`               | Must be true to write files                                |
+| `path`       | string | required when enabled | Active log file path                                       |
+| `maxSizeMB`  | int    | `100`                 | Rotate when size exceeds this                              |
+| `maxBackups` | int    | `10`                  | How many rotated files to keep                             |
+| `maxAgeDays` | int    | `30`                  | Delete backups older than this                             |
+| `compress`   | bool   | `false`               | Gzips rotated backups after rotate                         |
+| `fsync`      | bool   | `false`               | Sync file data on each write for stronger crash durability |
 
 ### `http`
 
@@ -108,28 +110,40 @@ At least one of `stdout`, `file.enabled`, `http.enabled`, `loki.enabled`, `otlp.
 
 URL schemes other than `http`/`https`, or URLs without a host, are rejected at validation.
 
+### `loki`
+
+| Key                 | Type   | Default               | Notes                                    |
+| ------------------- | ------ | --------------------- | ---------------------------------------- |
+| `enabled`           | bool   | `false`               | Must be true to push to Loki             |
+| `url`               | string | required when enabled | Loki push endpoint (`/loki/api/v1/push`) |
+| `timeout_ms`        | int    | `5000`                | Per-request timeout                      |
+| `headers`           | object | `{}`                  | Extra HTTP headers                       |
+| `batch_size`        | int    | `50`                  | Lines per push request                   |
+| `flush_interval_ms` | int    | `1000`                | Periodic flush ticker                    |
+| `labels`            | object | `{}`                  | Static stream labels                     |
+
 ### `otlp`
 
-| Key                 | Type   | Default               | Notes                                        |
-| ------------------- | ------ | --------------------- | -------------------------------------------- |
-| `enabled`           | bool   | `false`               | Must be true to ship OTLP logs               |
-| `url`               | string | required when enabled | Collector base URL or `/v1/logs` endpoint    |
-| `timeout_ms`        | int    | `5000`                | Per-request timeout                          |
-| `headers`           | object | `{}`                  | Extra HTTP headers (treat values as secrets) |
-| `batch_size`        | int    | `50`                  | Lines per OTLP export call                   |
-| `flush_interval_ms` | int    | `1000`                | Periodic flush ticker                        |
+| Key                 | Type   | Default               | Notes                                            |
+| ------------------- | ------ | --------------------- | ------------------------------------------------ |
+| `enabled`           | bool   | `false`               | Must be true to export OTLP logs                 |
+| `url`               | string | required when enabled | Collector URL (`/v1/logs` appended when omitted) |
+| `timeout_ms`        | int    | `5000`                | Per-request timeout                              |
+| `headers`           | object | `{}`                  | Extra HTTP headers                               |
+| `batch_size`        | int    | `50`                  | Lines per export batch                           |
+| `flush_interval_ms` | int    | `1000`                | Periodic flush ticker                            |
 
 ### `kafka`
 
-| Key                 | Type     | Default               | Notes                                              |
-| ------------------- | -------- | --------------------- | -------------------------------------------------- |
-| `enabled`           | bool     | `false`               | Must be true to ship to Kafka                      |
-| `brokers`           | string[] | required when enabled | Broker addresses such as `host:9092`               |
-| `topic`             | string   | required when enabled | Topic for serialized JSON lines                    |
-| `timeout_ms`        | int      | `5000`                | Produce timeout                                    |
-| `batch_size`        | int      | `50`                  | Sink-local batch size                              |
-| `flush_interval_ms` | int      | `1000`                | Periodic flush ticker                              |
-| `required_acks`     | int      | `1`                   | `-1` all replicas, `1` leader, `0` fire-and-forget |
+| Key                 | Type     | Default               | Notes                                   |
+| ------------------- | -------- | --------------------- | --------------------------------------- |
+| `enabled`           | bool     | `false`               | Must be true to publish to Kafka        |
+| `brokers`           | string[] | required when enabled | Bootstrap brokers                       |
+| `topic`             | string   | required when enabled | Destination topic                       |
+| `timeout_ms`        | int      | `5000`                | Per-write timeout                       |
+| `batch_size`        | int      | `50`                  | Lines per publish batch                 |
+| `flush_interval_ms` | int      | `1000`                | Periodic flush ticker                   |
+| `required_acks`     | int      | `1`                   | `-1` all replicas, `1` leader, `0` none |
 
 ## Legacy flat keys
 
@@ -173,7 +187,9 @@ Prefer the nested form for new services.
     "path": "/var/log/my-api/app.log",
     "maxSizeMB": 100,
     "maxBackups": 10,
-    "maxAgeDays": 14
+    "maxAgeDays": 14,
+    "compress": true,
+    "fsync": false
   }
 }
 ```

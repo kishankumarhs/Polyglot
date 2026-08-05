@@ -458,6 +458,7 @@ func logger_create_from_config_file_with_overrides(configPath *C.char, overlayJS
 
 	path := goString(configPath)
 	overlay := []byte(goString(overlayJSON))
+
 	cfg, _, err := core.CreateConfigFromFileWithOverrides(path, overlay)
 	if err != nil {
 		setGlobalErr(err)

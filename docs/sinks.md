@@ -2,14 +2,14 @@
 
 Destinations for serialized JSON lines. You can enable more than one.
 
-| Sink   | Config                                                           | Format                                       |
-| ------ | ---------------------------------------------------------------- | -------------------------------------------- |
-| Stdout | `"stdout": true`                                                 | JSON lines, or `stdout_format: text`         |
-| File   | `"file": { "enabled": true, ... }`                               | JSON lines, rotation, optional gzip          |
-| HTTP   | `"http": { "enabled": true, ... }`                               | Batched NDJSON POST                          |
-| Loki   | `"loki": { "enabled": true, "url": "..." }`                      | Loki push JSON                               |
-| OTLP   | `"otlp": { "enabled": true, "url": "..." }`                      | OTLP/HTTP protobuf export                    |
-| Kafka  | `"kafka": { "enabled": true, "brokers": [...], "topic": "..." }` | Kafka messages containing one JSON line each |
+| Sink   | Config                                                           | Format                                     |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------ |
+| Stdout | `"stdout": true`                                                 | JSON lines, or `stdout_format: text`       |
+| File   | `"file": { "enabled": true, ... }`                               | JSON lines, rotation, optional gzip        |
+| HTTP   | `"http": { "enabled": true, ... }`                               | Batched NDJSON POST                        |
+| Loki   | `"loki": { "enabled": true, "url": "..." }`                      | Loki push JSON                             |
+| OTLP   | `"otlp": { "enabled": true, "url": "..." }`                      | OTLP/HTTP protobuf export                  |
+| Kafka  | `"kafka": { "enabled": true, "brokers": [...], "topic": "..." }` | Kafka messages (one JSON line per message) |
 
 Syslog is reserved, not implemented.
 
@@ -118,20 +118,19 @@ Writes serialized log lines to a Kafka topic. Each message contains one JSON lin
 {
   "service": "payments-api",
   "stdout": false,
-  "kafka": {
+  "otlp": {
     "enabled": true,
-    "brokers": ["kafka-1:9092", "kafka-2:9092"],
-    "topic": "payments.logs",
+    "url": "https://collector.example/v1/logs",
     "batch_size": 100,
     "flush_interval_ms": 1000,
-    "required_acks": 1
+    "headers": { "Authorization": "Bearer <token>" }
   }
 }
 ```
 
-## OTLP
+## Kafka
 
-Exports logs to an OpenTelemetry collector over OTLP/HTTP protobuf. The sink batches log lines and retries failed exports with bounded local buffering, matching the lifecycle behavior of HTTP/Loki/Kafka sinks.
+Publishes logs to Kafka. Each message contains one serialized JSON log line.
 
 ```json
 {
@@ -142,7 +141,15 @@ Exports logs to an OpenTelemetry collector over OTLP/HTTP protobuf. The sink bat
     "url": "https://collector.example/v1/logs",
     "batch_size": 100,
     "flush_interval_ms": 1000,
-    "headers": { "Authorization": "Bearer <token>" }
+    "headers": { "Authorization": "Bearer <token>" }  
+   },
+  "kafka": {
+    "enabled": true,
+    "brokers": ["kafka-1:9092", "kafka-2:9092"],
+    "topic": "payments.logs",
+    "batch_size": 100,
+    "flush_interval_ms": 1000,
+    "required_acks": 1
   }
 }
 ```

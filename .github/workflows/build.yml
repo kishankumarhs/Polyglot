@@ -111,10 +111,11 @@ jobs:
           bash scripts/build-native.sh dist
       - name: Install, build, test
         working-directory: bindings/node
+        env:
+          POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
         run: |
           npm install
           npm run build
-          export POLYGLOT_LOGGER_LIB=$GITHUB_WORKSPACE/dist/liblogger.so
           npm test
 
   dotnet-smoke:
