@@ -459,13 +459,6 @@ func logger_create_from_config_file_with_overrides(configPath *C.char, overlayJS
 	path := goString(configPath)
 	overlay := []byte(goString(overlayJSON))
 
-	// Debug logging
-	if path != "" {
-		fmt.Fprintf(os.Stderr, "[DEBUG] logger_create_from_config_file_with_overrides called with explicit path: %q\n", path)
-	} else {
-		fmt.Fprintf(os.Stderr, "[DEBUG] logger_create_from_config_file_with_overrides called with no explicit path\n")
-	}
-
 	cfg, _, err := core.CreateConfigFromFileWithOverrides(path, overlay)
 	if err != nil {
 		setGlobalErr(err)
