@@ -2,14 +2,16 @@
 
 Destinations for serialized JSON lines. You can enable more than one.
 
-| Sink | Config | Format |
-| --- | --- | --- |
-| Stdout | `"stdout": true` | JSON lines, or `stdout_format: text` |
-| File | `"file": { "enabled": true, ... }` | JSON lines, rotation, optional gzip |
-| HTTP | `"http": { "enabled": true, ... }` | Batched NDJSON POST |
-| Loki | `"loki": { "enabled": true, "url": "..." }` | Loki push JSON |
+| Sink   | Config                                                           | Format                                     |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------ |
+| Stdout | `"stdout": true`                                                 | JSON lines, or `stdout_format: text`       |
+| File   | `"file": { "enabled": true, ... }`                               | JSON lines, rotation, optional gzip        |
+| HTTP   | `"http": { "enabled": true, ... }`                               | Batched NDJSON POST                        |
+| Loki   | `"loki": { "enabled": true, "url": "..." }`                      | Loki push JSON                             |
+| OTLP   | `"otlp": { "enabled": true, "url": "..." }`                      | OTLP/HTTP protobuf export                  |
+| Kafka  | `"kafka": { "enabled": true, "brokers": [...], "topic": "..." }` | Kafka messages (one JSON line per message) |
 
-Kafka / syslog / OTLP are reserved, not implemented.
+Syslog is reserved, not implemented.
 
 ## Stdout
 
@@ -17,7 +19,7 @@ Good for containers and local dev.
 
 ## File
 
-Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups.
+Writes to `file.path`, rotates on `maxSizeMB`, trims with `maxBackups` / `maxAgeDays`. `compress: true` gzips rotated backups. `fsync: true` syncs each write for stronger crash durability (with lower throughput).
 
 ## HTTP
 
@@ -108,13 +110,52 @@ App ──HTTP NDJSON──► Vector/Alloy ──► Loki
 App ──file──► Promtail/Alloy ──► Loki   (uses local disk)
 ```
 
+## OTLP
+
+Exports logs to an OpenTelemetry collector over OTLP/HTTP protobuf. Batching, flush cadence, retry, and bounded buffering follow the same lifecycle model as HTTP/Loki/Kafka sinks.
+
+```json
+{
+  "service": "payments-api",
+  "stdout": false,
+  "otlp": {
+    "enabled": true,
+    "url": "https://collector.example/v1/logs",
+    "batch_size": 100,
+    "flush_interval_ms": 1000,
+    "headers": { "Authorization": "Bearer <token>" }
+  }
+}
+```
+
+## Kafka
+
+Publishes logs to Kafka. Each message contains one serialized JSON log line.
+
+```json
+{
+  "service": "payments-api",
+  "stdout": false,
+  "kafka": {
+    "enabled": true,
+    "brokers": ["kafka-1:9092", "kafka-2:9092"],
+    "topic": "payments.logs",
+    "batch_size": 100,
+    "flush_interval_ms": 1000,
+    "required_acks": 1
+  }
+}
+```
+
 ## Choosing
 
-| Constraint | Suggestion |
-| --- | --- |
-| Don't fill VM disks | Disable file; enable `loki` or `http` |
-| Grafana | Native `loki`, or HTTP → Vector → Loki |
-| Already run Vector/Alloy | HTTP NDJSON + recipe above |
-| Air-gapped | File + `compress` + tight rotation |
+| Constraint               | Suggestion                             |
+| ------------------------ | -------------------------------------- |
+| Don't fill VM disks      | Disable file; enable `loki` or `http`  |
+| Grafana                  | Native `loki`, or HTTP → Vector → Loki |
+| OpenTelemetry backend    | Use `otlp` sink                        |
+| Existing Kafka pipeline  | Use native `kafka` sink                |
+| Already run Vector/Alloy | HTTP NDJSON + recipe above             |
+| Air-gapped               | File + `compress` + tight rotation     |
 
 See [configuration.md](configuration.md) · [troubleshooting.md](troubleshooting.md).
