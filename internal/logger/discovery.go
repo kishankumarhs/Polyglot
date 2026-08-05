@@ -74,8 +74,10 @@ func ResolveConfigPath(explicitPath string) ConfigResolveInfo {
 		}
 
 		// Stop at git repo root (do not walk outside the project).
-		if st, err := os.Stat(filepath.Join(current, ".git")); err == nil {
-			_ = st
+		// Only treat .git as a repo root if it's a directory, not a file
+		// (submodules have .git as a file, not a directory).
+		gitPath := filepath.Join(current, ".git")
+		if st, err := os.Stat(gitPath); err == nil && st.IsDir() {
 			info.StoppedAtGit = true
 			return info
 		}
