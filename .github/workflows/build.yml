@@ -87,6 +87,8 @@ jobs:
           sudo apt-get update && sudo apt-get install -y gcc
           bash scripts/build-native.sh dist
       - name: Install and test
+        env:
+          POLYGLOT_CONFIG: ${{ github.workspace }}/.github/ci-safe.yaml
         run: |
           python -m pip install pytest
           python -m pip install -e bindings/python
@@ -111,10 +113,12 @@ jobs:
           bash scripts/build-native.sh dist
       - name: Install, build, test
         working-directory: bindings/node
+        env:
+          POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+          POLYGLOT_CONFIG: ${{ github.workspace }}/.github/ci-safe.yaml
         run: |
           npm install
           npm run build
-          export POLYGLOT_LOGGER_LIB=$GITHUB_WORKSPACE/dist/liblogger.so
           npm test
 
   dotnet-smoke:
@@ -137,6 +141,7 @@ jobs:
       - name: Test
         env:
           POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+          POLYGLOT_CONFIG: ${{ github.workspace }}/.github/ci-safe.yaml
         run: dotnet test bindings/dotnet/Polyglot.Logger.Tests/Polyglot.Logger.Tests.csproj -c Release
 
   bench-smoke:
@@ -159,6 +164,7 @@ jobs:
       - name: Bench smoke
         env:
           POLYGLOT_LOGGER_LIB: ${{ github.workspace }}/dist/liblogger.so
+          POLYGLOT_CONFIG: ${{ github.workspace }}/.github/ci-safe.yaml
         run: bash scripts/bench-smoke.sh
       - name: Upload bench artifacts
         if: always()

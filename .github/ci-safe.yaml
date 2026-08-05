@@ -1,0 +1,20 @@
+# CI test-safe configuration (no file or remote sinks)
+service: test-app
+level: info
+stdout: true
+stdout_format: json
+async: true
+queueSize: 1000
+overflow: drop_newest
+
+# Disable all remote sinks to prevent CI network calls
+file:
+  enabled: false
+http:
+  enabled: false
+loki:
+  enabled: false
+otlp:
+  enabled: false
+kafka:
+  enabled: false
